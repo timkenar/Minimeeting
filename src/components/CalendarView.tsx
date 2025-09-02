@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Calendar, Clock, User, Building2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, Clock, User, Building2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Meeting {
@@ -24,10 +24,14 @@ interface CalendarViewProps {
   meetings: Meeting[];
   onMeetingSelect?: (meeting: Meeting) => void;
   selectedMeeting?: Meeting | null;
+  onCreateMeeting?: (date: Date) => void;
+  onDaySelect?: (date: Date, meetings: Meeting[]) => void;
 }
 
-const CalendarView = ({ meetings, onMeetingSelect, selectedMeeting }: CalendarViewProps) => {
+const CalendarView = ({ meetings, onMeetingSelect, selectedMeeting, onCreateMeeting, onDaySelect }: CalendarViewProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [viewMode, setViewMode] = useState<'month' | 'day'>('month');
   
   const monthNames = [
     "January", "February", "March", "April", "May", "June",
@@ -148,6 +152,18 @@ const CalendarView = ({ meetings, onMeetingSelect, selectedMeeting }: CalendarVi
       default: return 'bg-calendar-pending';
     }
   };
+
+  const handleDayClick = (date: Date) => {
+    const dayMeetings = getMeetingsForDate(date);
+    setSelectedDay(date);
+    setViewMode('day');
+    onDaySelect?.(date, dayMeetings);
+  };
+
+  const goBackToMonth = () => {
+    setViewMode('month');
+    setSelectedDay(null);
+  };
   
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 p-6 min-h-screen bg-gradient-subtle">
@@ -197,9 +213,10 @@ const CalendarView = ({ meetings, onMeetingSelect, selectedMeeting }: CalendarVi
                     className={cn(
                       "p-2 text-sm rounded-lg transition-all duration-200 hover:bg-calendar-hover relative",
                       day.isCurrentMonth ? "text-calendar-day" : "text-calendar-muted",
-                      isToday(day.date) && "calendar-today"
+                      isToday(day.date) && "calendar-today",
+                      selectedDay && selectedDay.toDateString() === day.date.toDateString() && "ring-2 ring-blue-500 bg-blue-50"
                     )}
-                    onClick={() => setCurrentDate(day.date)}
+                    onClick={() => handleDayClick(day.date)}
                   >
                     {day.day}
                     {dayMeetings.length > 0 && (
@@ -319,22 +336,39 @@ const CalendarView = ({ meetings, onMeetingSelect, selectedMeeting }: CalendarVi
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <CardTitle className="text-2xl font-bold text-calendar-header">
-                  {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+                  {viewMode === 'day' && selectedDay 
+                    ? `${selectedDay.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`
+                    : `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`
+                  }
                 </CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={goToToday}
-                  className="calendar-today-button"
-                >
-                  Today
-                </Button>
+                {viewMode === 'day' ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={goBackToMonth}
+                    className="calendar-today-button"
+                  >
+                    Back to Month
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={goToToday}
+                    className="calendar-today-button"
+                  >
+                    Today
+                  </Button>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => navigateMonth('prev')}
+                  onClick={() => viewMode === 'day' && selectedDay ? 
+                    handleDayClick(new Date(selectedDay.getTime() - 24 * 60 * 60 * 1000)) : 
+                    navigateMonth('prev')
+                  }
                   className="calendar-nav-button"
                 >
                   <ChevronLeft className="w-5 h-5" />
@@ -342,7 +376,10 @@ const CalendarView = ({ meetings, onMeetingSelect, selectedMeeting }: CalendarVi
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => navigateMonth('next')}
+                  onClick={() => viewMode === 'day' && selectedDay ? 
+                    handleDayClick(new Date(selectedDay.getTime() + 24 * 60 * 60 * 1000)) : 
+                    navigateMonth('next')
+                  }
                   className="calendar-nav-button"
                 >
                   <ChevronRight className="w-5 h-5" />
@@ -351,29 +388,33 @@ const CalendarView = ({ meetings, onMeetingSelect, selectedMeeting }: CalendarVi
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            {/* Day Headers */}
-            <div className="grid grid-cols-7 gap-2 mb-4">
-              {dayNames.map(day => (
-                <div key={day} className="text-center text-sm font-semibold text-calendar-muted p-3">
-                  {day}
+            {viewMode === 'month' ? (
+              <>
+                {/* Day Headers */}
+                <div className="grid grid-cols-7 gap-2 mb-4">
+                  {dayNames.map(day => (
+                    <div key={day} className="text-center text-sm font-semibold text-calendar-muted p-3">
+                      {day}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            
-            {/* Calendar Grid */}
-            <div className="grid grid-cols-7 gap-2">
+                
+                {/* Calendar Grid */}
+                <div className="grid grid-cols-7 gap-2">
               {calendarDays.map((day, index) => {
                 const dayMeetings = getMeetingsForDate(day.date);
                 return (
                   <div
                     key={index}
                     className={cn(
-                      "min-h-[100px] p-2 rounded-xl border transition-all duration-200 hover:shadow-soft",
+                      "min-h-[100px] p-2 rounded-xl border transition-all duration-200 hover:shadow-soft cursor-pointer hover:bg-calendar-hover",
                       day.isCurrentMonth 
                         ? "calendar-day-cell border-calendar-border" 
                         : "calendar-day-outside border-calendar-border-muted",
-                      isToday(day.date) && "calendar-today-cell"
+                      isToday(day.date) && "calendar-today-cell",
+                      selectedDay && selectedDay.toDateString() === day.date.toDateString() && "ring-2 ring-blue-500 bg-blue-50"
                     )}
+                    onClick={() => handleDayClick(day.date)}
                   >
                     <div className={cn(
                       "text-sm font-medium mb-2",
@@ -392,7 +433,10 @@ const CalendarView = ({ meetings, onMeetingSelect, selectedMeeting }: CalendarVi
                             "calendar-event-item",
                             selectedMeeting?.id === meeting.id && "ring-1 ring-primary"
                           )}
-                          onClick={() => onMeetingSelect?.(meeting)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onMeetingSelect?.(meeting);
+                          }}
                           style={{
                             backgroundColor: meeting.status === 'scheduled' ? 'hsl(var(--calendar-scheduled) / 0.2)' :
                                            meeting.status === 'completed' ? 'hsl(var(--calendar-completed) / 0.2)' :
@@ -418,11 +462,142 @@ const CalendarView = ({ meetings, onMeetingSelect, selectedMeeting }: CalendarVi
                           +{dayMeetings.length - 3} more
                         </div>
                       )}
+                      
+                      {/* Add Meeting Button for available slots */}
+                      {dayMeetings.length < 3 && day.isCurrentMonth && onCreateMeeting && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full h-6 text-xs p-1 hover:bg-green-100 flex items-center justify-center border border-dashed border-green-300 text-green-600"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onCreateMeeting(day.date);
+                          }}
+                          title="Create new meeting"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 );
               })}
-            </div>
+                </div>
+              </>
+            ) : (
+              /* Day View */
+              <div className="space-y-4">
+                {selectedDay && (
+                  <>
+                    {/* Day's meetings */}
+                    <div className="space-y-3">
+                      {(() => {
+                        const dayMeetings = getMeetingsForDate(selectedDay);
+                        return dayMeetings.length === 0 ? (
+                          <div className="text-center py-8">
+                            <Calendar className="w-12 h-12 text-calendar-muted mx-auto mb-4" />
+                            <p className="text-calendar-muted">No meetings scheduled for this day</p>
+                            {onCreateMeeting && (
+                              <Button
+                                variant="outline"
+                                className="mt-4"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onCreateMeeting(selectedDay);
+                                }}
+                              >
+                                <Plus className="w-4 h-4 mr-2" />
+                                Create Meeting
+                              </Button>
+                            )}
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <h3 className="text-lg font-semibold text-calendar-header">
+                                {dayMeetings.length} meeting{dayMeetings.length !== 1 ? 's' : ''} scheduled
+                              </h3>
+                              {onCreateMeeting && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onCreateMeeting(selectedDay);
+                                  }}
+                                >
+                                  <Plus className="w-4 h-4 mr-2" />
+                                  Add Meeting
+                                </Button>
+                              )}
+                            </div>
+                            <div className="grid gap-3">
+                              {dayMeetings.map(meeting => (
+                                <div
+                                  key={meeting.id}
+                                  className={cn(
+                                    "p-4 rounded-lg border cursor-pointer transition-all duration-200 hover:shadow-sm",
+                                    "calendar-event-card",
+                                    selectedMeeting?.id === meeting.id && "ring-2 ring-primary"
+                                  )}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onMeetingSelect?.(meeting);
+                                  }}
+                                  style={{
+                                    backgroundColor: meeting.status === 'scheduled' ? 'hsl(var(--calendar-scheduled) / 0.1)' :
+                                                   meeting.status === 'completed' ? 'hsl(var(--calendar-completed) / 0.1)' :
+                                                   'hsl(var(--calendar-pending) / 0.1)',
+                                    borderLeft: `4px solid hsl(var(--calendar-${meeting.status || 'pending'}))`
+                                  }}
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <User className="w-4 h-4 text-calendar-day" />
+                                        <span className="font-medium text-calendar-day">{meeting.name}</span>
+                                        <Badge variant="outline" className={cn(
+                                          "text-xs",
+                                          meeting.status === 'scheduled' && "bg-green-50 text-green-700 border-green-200",
+                                          meeting.status === 'completed' && "bg-blue-50 text-blue-700 border-blue-200",
+                                          !meeting.status && "bg-orange-50 text-orange-700 border-orange-200"
+                                        )}>
+                                          {meeting.status || 'pending'}
+                                        </Badge>
+                                      </div>
+                                      
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <Building2 className="w-4 h-4 text-calendar-muted" />
+                                        <span className="text-calendar-muted">{meeting.organization}</span>
+                                      </div>
+                                      
+                                      {meeting.assigned_datetime && (
+                                        <div className="flex items-center gap-2 mb-2">
+                                          <Clock className="w-4 h-4 text-calendar-muted" />
+                                          <span className="text-calendar-muted">
+                                            {new Date(meeting.assigned_datetime).toLocaleTimeString('en-US', { 
+                                              hour: 'numeric', 
+                                              minute: '2-digit',
+                                              hour12: true 
+                                            })}
+                                          </span>
+                                        </div>
+                                      )}
+                                      
+                                      <p className="text-sm text-calendar-day mt-2">{meeting.reason}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

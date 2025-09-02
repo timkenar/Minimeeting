@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, User, Building2, MessageSquare, PenTool, LogIn, CalendarDays, ChevronLeft, ChevronRight, LogOut, Edit, Trash2, Mail, Phone } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Calendar, Clock, User, Building2, MessageSquare, PenTool, LogIn, CalendarDays, ChevronLeft, ChevronRight, Edit, Trash2, Mail, Phone, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CalendarView from "./CalendarView";
 
@@ -25,7 +26,11 @@ interface Meeting {
   assigned_datetime?: string;
 }
 
-const AdminDashboard = () => {
+interface AdminDashboardProps {
+  onAuthChange?: (isAuthenticated: boolean) => void;
+}
+
+const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [editingSignature, setEditingSignature] = useState<string | null>(null);
@@ -36,7 +41,7 @@ const AdminDashboard = () => {
   const [password, setPassword] = useState("");
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [calendarView, setCalendarView] = useState<'day' | 'week' | 'month' | 'calendar' | 'create'>('calendar');
+  const [calendarView, setCalendarView] = useState<'day' | 'week' | 'month' | 'calendar'>('calendar');
   const [createMeetingForm, setCreateMeetingForm] = useState({
     name: '',
     organization: '',
@@ -48,6 +53,13 @@ const AdminDashboard = () => {
     end_time: ''
   });
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
+  const [showMeetingDialog, setShowMeetingDialog] = useState(false);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [createMeetingDateTime, setCreateMeetingDateTime] = useState<{date: string, time: string} | null>(null);
+  const [editingDateTime, setEditingDateTime] = useState(false);
+  const [tempDateTime, setTempDateTime] = useState({ date: '', time: '' });
+  const [editingDetails, setEditingDetails] = useState(false);
+  const [tempDetails, setTempDetails] = useState({ name: '', organization: '', reason: '', email: '', phone: '' });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -103,6 +115,7 @@ const AdminDashboard = () => {
         const data = await response.json();
         setAccessToken(data.access);
         setIsAuthenticated(true);
+        onAuthChange?.(true);
         toast({
           title: "Login successful",
           description: "Welcome to the admin dashboard"
@@ -203,6 +216,106 @@ const AdminDashboard = () => {
     setTempSignature(meeting.signature || "");
   };
 
+  const startDateTimeEdit = (meeting: Meeting) => {
+    if (meeting.assigned_datetime) {
+      const date = new Date(meeting.assigned_datetime);
+      setTempDateTime({
+        date: date.toISOString().split('T')[0],
+        time: date.toTimeString().slice(0, 5)
+      });
+    } else {
+      const now = new Date();
+      setTempDateTime({
+        date: now.toISOString().split('T')[0],
+        time: '09:00'
+      });
+    }
+    setEditingDateTime(true);
+  };
+
+  const saveDateTimeEdit = async (meetingId: number) => {
+    try {
+      const combinedDateTime = new Date(`${tempDateTime.date}T${tempDateTime.time}`);
+      
+      const response = await fetch(`http://localhost:8000/meetings/${meetingId}/`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          assigned_datetime: combinedDateTime.toISOString(),
+          status: 'scheduled'
+        }),
+      });
+
+      if (response.ok) {
+        await loadMeetings();
+        setEditingDateTime(false);
+        toast({
+          title: "Meeting rescheduled",
+          description: "Meeting time has been updated successfully."
+        });
+      } else if (response.status === 409) {
+        const errorData = await response.json();
+        toast({
+          title: "Time slot occupied",
+          description: `This time is already booked by ${errorData.conflicting_meeting.name}`,
+          variant: "destructive"
+        });
+      } else {
+        throw new Error('Failed to reschedule meeting');
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reschedule meeting",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const startDetailsEdit = (meeting: Meeting) => {
+    setTempDetails({
+      name: meeting.name,
+      organization: meeting.organization,
+      reason: meeting.reason,
+      email: meeting.email || '',
+      phone: meeting.phone || ''
+    });
+    setEditingDetails(true);
+  };
+
+  const saveDetailsEdit = async (meetingId: number) => {
+    try {
+      const response = await fetch(`http://localhost:8000/meetings/${meetingId}/`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(tempDetails),
+      });
+
+      if (response.ok) {
+        await loadMeetings();
+        setEditingDetails(false);
+        toast({
+          title: "Details updated",
+          description: "Meeting details have been updated successfully."
+        });
+      } else {
+        throw new Error('Failed to update details');
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update meeting details",
+        variant: "destructive"
+      });
+    }
+  };
+
   const assignMeetingTime = async (meetingId: number, dateTime: string) => {
     try {
       const response = await fetch(`http://localhost:8000/meetings/${meetingId}/`, {
@@ -262,6 +375,7 @@ const AdminDashboard = () => {
     setAccessToken(null);
     setMeetings([]);
     setSelectedMeeting(null);
+    onAuthChange?.(false);
     
     toast({
       title: "Logged out",
@@ -369,6 +483,8 @@ const AdminDashboard = () => {
           start_time: '',
           end_time: ''
         });
+        setShowCreateDialog(false);
+        setCreateMeetingDateTime(null);
         toast({
           title: "Meeting created",
           description: `Meeting with ${data.meeting_details.name} has been scheduled successfully.`
@@ -388,6 +504,20 @@ const AdminDashboard = () => {
         variant: "destructive"
       });
     }
+  };
+
+  const openCreateMeetingDialog = (date: Date, hour?: number) => {
+    const dateStr = date.toISOString().split('T')[0];
+    const timeStr = hour ? `${hour.toString().padStart(2, '0')}:00` : '09:00';
+    
+    setCreateMeetingForm({
+      ...createMeetingForm,
+      date: dateStr,
+      start_time: timeStr,
+      end_time: hour ? `${(hour + 1).toString().padStart(2, '0')}:00` : '10:00'
+    });
+    setCreateMeetingDateTime({ date: dateStr, time: timeStr });
+    setShowCreateDialog(true);
   };
 
   const CalendarDayView = ({ date, meetings, onAssignMeeting, selectedMeeting }: {
@@ -431,33 +561,19 @@ const AdminDashboard = () => {
                   </div>
                   <div className="flex-1">
                     {scheduledMeeting ? (
-                      <div className="flex items-center justify-between">
+                      <div 
+                        className="flex items-center justify-between cursor-pointer hover:bg-red-50 p-2 rounded"
+                        onClick={() => {
+                          setSelectedMeeting(scheduledMeeting);
+                          setShowMeetingDialog(true);
+                        }}
+                      >
                         <div className="flex items-center gap-2">
                           <Badge variant="default" className="bg-red-500">Occupied</Badge>
                           <div>
                             <div className="text-sm font-medium">{scheduledMeeting.name}</div>
                             <div className="text-xs text-muted-foreground">{scheduledMeeting.organization}</div>
                           </div>
-                        </div>
-                        <div className="flex gap-1">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            className="h-6 w-6 p-0 hover:bg-blue-100"
-                            onClick={() => setSelectedMeeting(scheduledMeeting)}
-                            title="Edit meeting"
-                          >
-                            <Edit className="w-3 h-3 text-blue-600" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            className="h-6 w-6 p-0 hover:bg-red-100"
-                            onClick={() => deleteMeeting(scheduledMeeting.id)}
-                            title="Delete meeting"
-                          >
-                            <Trash2 className="w-3 h-3 text-red-600" />
-                          </Button>
                         </div>
                       </div>
                     ) : selectedMeeting ? (
@@ -478,9 +594,20 @@ const AdminDashboard = () => {
                         {selectedMeeting.status === 'scheduled' ? 'Reschedule' : 'Assign'} {selectedMeeting.name} to {hour > 12 ? hour - 12 : hour}:00 {hour >= 12 ? 'PM' : 'AM'}
                       </Button>
                     ) : (
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">Available</Badge>
-                        <span className="text-sm text-muted-foreground">Open slot</span>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">Available</Badge>
+                          <span className="text-sm text-muted-foreground">Open slot</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 hover:bg-green-100"
+                          onClick={() => openCreateMeetingDialog(date, hour)}
+                          title="Create new meeting"
+                        >
+                          <Plus className="w-3 h-3 text-green-600" />
+                        </Button>
                       </div>
                     )}
                   </div>
@@ -547,29 +674,15 @@ const AdminDashboard = () => {
                       !isAvailable ? 'bg-red-100 border-red-300' : 'bg-white border-gray-200 hover:bg-green-50'
                     }`}>
                       {scheduledMeeting ? (
-                        <div className="p-1 group">
+                        <div 
+                          className="p-1 group cursor-pointer hover:bg-red-200 rounded"
+                          onClick={() => {
+                            setSelectedMeeting(scheduledMeeting);
+                            setShowMeetingDialog(true);
+                          }}
+                        >
                           <div className="text-xs font-medium text-red-700 truncate">{scheduledMeeting.name}</div>
                           <div className="text-xs text-red-600 truncate">{scheduledMeeting.organization}</div>
-                          <div className="flex gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              className="h-4 w-4 p-0 hover:bg-blue-100"
-                              onClick={() => setSelectedMeeting(scheduledMeeting)}
-                              title="Edit"
-                            >
-                              <Edit className="w-2 h-2 text-blue-600" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              className="h-4 w-4 p-0 hover:bg-red-100"
-                              onClick={() => deleteMeeting(scheduledMeeting.id)}
-                              title="Delete"
-                            >
-                              <Trash2 className="w-2 h-2 text-red-600" />
-                            </Button>
-                          </div>
                         </div>
                       ) : selectedMeeting ? (
                         <Button 
@@ -590,7 +703,17 @@ const AdminDashboard = () => {
                         >
                           {selectedMeeting.status === 'scheduled' ? 'Move' : 'Assign'}
                         </Button>
-                      ) : null}
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full h-full text-xs p-1 hover:bg-green-100 flex items-center justify-center"
+                          onClick={() => openCreateMeetingDialog(day, hour)}
+                          title="Create new meeting"
+                        >
+                          <Plus className="w-3 h-3 text-green-600" />
+                        </Button>
+                      )}
                     </div>
                   );
                 })}
@@ -654,35 +777,16 @@ const AdminDashboard = () => {
                   
                   <div className="space-y-1">
                     {dayMeetings.map(meeting => (
-                      <div key={meeting.id} className="bg-blue-100 text-blue-800 text-xs p-1 rounded group relative">
+                      <div 
+                        key={meeting.id} 
+                        className="bg-blue-100 text-blue-800 text-xs p-1 rounded cursor-pointer hover:bg-blue-200"
+                        onClick={() => {
+                          setSelectedMeeting(meeting);
+                          setShowMeetingDialog(true);
+                        }}
+                      >
                         <div className="font-medium truncate">{meeting.name}</div>
                         <div className="text-xs">{new Date(meeting.assigned_datetime!).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</div>
-                        <div className="absolute top-0 right-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            className="h-4 w-4 p-0 bg-white hover:bg-blue-50"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedMeeting(meeting);
-                            }}
-                            title="Edit"
-                          >
-                            <Edit className="w-2 h-2 text-blue-600" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            className="h-4 w-4 p-0 bg-white hover:bg-red-50"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteMeeting(meeting.id);
-                            }}
-                            title="Delete"
-                          >
-                            <Trash2 className="w-2 h-2 text-red-600" />
-                          </Button>
-                        </div>
                       </div>
                     ))}
                     
@@ -706,6 +810,19 @@ const AdminDashboard = () => {
                         }}
                       >
                         {selectedMeeting.status === 'scheduled' ? 'Move Here' : 'Assign'}
+                      </Button>
+                    )}
+
+                    {dayMeetings.length < 3 && isCurrentMonth && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-xs p-1 hover:bg-green-100 flex items-center justify-center border border-dashed border-green-300"
+                        onClick={() => openCreateMeetingDialog(day)}
+                        title="Create new meeting"
+                      >
+                        <Plus className="w-3 h-3 text-green-600 mr-1" />
+                        Add Meeting
                       </Button>
                     )}
                   </div>
@@ -760,8 +877,8 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="flex h-screen">
+    <div className="bg-background">
+      <div className="flex min-h-[calc(100vh-4rem)]">
         {/* Sidebar */}
         <div className="w-80 bg-muted/50 border-r p-6 overflow-y-auto">
           <div className="mb-6">
@@ -784,7 +901,10 @@ const AdminDashboard = () => {
                   className={`cursor-pointer transition-colors ${
                     selectedMeeting?.id === meeting.id ? 'ring-2 ring-primary' : ''
                   }`}
-                  onClick={() => setSelectedMeeting(meeting)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedMeeting(meeting);
+                  }}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between mb-2">
@@ -833,26 +953,19 @@ const AdminDashboard = () => {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 p-6">
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
-              <p className="text-muted-foreground">Assign meeting times and manage appointments</p>
-            </div>
-            <Button variant="outline" onClick={handleLogout} className="flex items-center gap-2">
-              <LogOut className="w-4 h-4" />
-              Logout
-            </Button>
+        <div className="flex-1 p-6" onClick={() => setSelectedMeeting(null)}>
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
+            <p className="text-muted-foreground">Assign meeting times and manage appointments</p>
           </div>
 
-          <Tabs value={calendarView} onValueChange={(value) => setCalendarView(value as 'day' | 'week' | 'month' | 'calendar' | 'create')}>
+          <Tabs value={calendarView} onValueChange={(value) => setCalendarView(value as 'day' | 'week' | 'month' | 'calendar')}>
             <div className="flex items-center justify-between mb-6">
               <TabsList>
                 <TabsTrigger value="calendar">Calendar</TabsTrigger>
                 <TabsTrigger value="day">Day</TabsTrigger>
                 <TabsTrigger value="week">Week</TabsTrigger>
                 <TabsTrigger value="month">Month</TabsTrigger>
-                <TabsTrigger value="create">Create Meeting</TabsTrigger>
               </TabsList>
               
               <div className="flex items-center gap-4">
@@ -881,8 +994,15 @@ const AdminDashboard = () => {
             <TabsContent value="calendar" className="mt-0">
               <CalendarView 
                 meetings={meetings} 
-                onMeetingSelect={setSelectedMeeting}
+                onMeetingSelect={(meeting) => {
+                  setSelectedMeeting(meeting);
+                  setShowMeetingDialog(true);
+                }}
                 selectedMeeting={selectedMeeting}
+                onCreateMeeting={openCreateMeetingDialog}
+                onDaySelect={(date, dayMeetings) => {
+                  setSelectedMeeting(null); // Clear meeting selection when day is selected
+                }}
               />
             </TabsContent>
 
@@ -922,291 +1042,442 @@ const AdminDashboard = () => {
               <CalendarMonthView date={currentDate} meetings={meetings} onAssignMeeting={assignMeetingTime} selectedMeeting={selectedMeeting} />
             </TabsContent>
 
-            <TabsContent value="create" className="mt-0">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Calendar className="w-5 h-5" />
-                    Create Meeting Manually
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleCreateMeeting} className="space-y-4">
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="name">Name*</Label>
-                        <Input
-                          id="name"
-                          value={createMeetingForm.name}
-                          onChange={(e) => setCreateMeetingForm({...createMeetingForm, name: e.target.value})}
-                          placeholder="Enter attendee name"
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="organization">Organization*</Label>
-                        <Input
-                          id="organization"
-                          value={createMeetingForm.organization}
-                          onChange={(e) => setCreateMeetingForm({...createMeetingForm, organization: e.target.value})}
-                          placeholder="Enter organization"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="reason">Reason*</Label>
-                      <Textarea
-                        id="reason"
-                        value={createMeetingForm.reason}
-                        onChange={(e) => setCreateMeetingForm({...createMeetingForm, reason: e.target.value})}
-                        placeholder="Enter meeting reason"
-                        required
-                      />
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={createMeetingForm.email}
-                          onChange={(e) => setCreateMeetingForm({...createMeetingForm, email: e.target.value})}
-                          placeholder="Enter email (optional)"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">Phone</Label>
-                        <Input
-                          id="phone"
-                          value={createMeetingForm.phone}
-                          onChange={(e) => setCreateMeetingForm({...createMeetingForm, phone: e.target.value})}
-                          placeholder="Enter phone (optional)"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid md:grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="date">Date*</Label>
-                        <Input
-                          id="date"
-                          type="date"
-                          value={createMeetingForm.date}
-                          onChange={(e) => setCreateMeetingForm({...createMeetingForm, date: e.target.value})}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="start_time">Start Time*</Label>
-                        <Input
-                          id="start_time"
-                          type="time"
-                          value={createMeetingForm.start_time}
-                          onChange={(e) => setCreateMeetingForm({...createMeetingForm, start_time: e.target.value})}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="end_time">End Time*</Label>
-                        <Input
-                          id="end_time"
-                          type="time"
-                          value={createMeetingForm.end_time}
-                          onChange={(e) => setCreateMeetingForm({...createMeetingForm, end_time: e.target.value})}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end gap-2">
-                      <Button 
-                        type="button" 
-                        variant="outline"
-                        onClick={() => {
-                          setCreateMeetingForm({
-                            name: '',
-                            organization: '',
-                            reason: '',
-                            email: '',
-                            phone: '',
-                            date: '',
-                            start_time: '',
-                            end_time: ''
-                          });
-                        }}
-                      >
-                        Clear Form
-                      </Button>
-                      <Button type="submit">
-                        Create Meeting
-                      </Button>
-                    </div>
-                  </form>
-                </CardContent>
-              </Card>
-            </TabsContent>
           </Tabs>
 
-          {/* Meeting Details Panel */}
-          {selectedMeeting && (
-            <Card className="mt-6">
-              <CardHeader>
-                <CardTitle>Meeting Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+          {/* Create Meeting Dialog */}
+          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Plus className="w-5 h-5" />
+                  Create New Meeting
+                  {createMeetingDateTime && (
+                    <span className="text-sm font-normal text-muted-foreground">
+                      for {createMeetingDateTime.date} at {createMeetingDateTime.time}
+                    </span>
+                  )}
+                </DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleCreateMeeting} className="space-y-4">
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-primary" />
-                      <span className="font-medium">Name:</span>
-                      <span>{selectedMeeting.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-primary" />
-                      <span className="font-medium">Organization:</span>
-                      <span>{selectedMeeting.organization}</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <MessageSquare className="w-4 h-4 text-primary mt-1" />
-                      <span className="font-medium">Reason:</span>
-                      <span>{selectedMeeting.reason}</span>
-                    </div>
-                    {selectedMeeting.email && (
-                      <div className="flex items-center gap-2">
-                        <Mail className="w-4 h-4 text-primary" />
-                        <span className="font-medium">Email:</span>
-                        <span>{selectedMeeting.email}</span>
-                      </div>
-                    )}
-                    {selectedMeeting.phone && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="w-4 h-4 text-primary" />
-                        <span className="font-medium">Phone:</span>
-                        <span>{selectedMeeting.phone}</span>
-                      </div>
-                    )}
+                    <Label htmlFor="name">Name*</Label>
+                    <Input
+                      id="name"
+                      value={createMeetingForm.name}
+                      onChange={(e) => setCreateMeetingForm({...createMeetingForm, name: e.target.value})}
+                      placeholder="Enter attendee name"
+                      required
+                    />
                   </div>
                   <div className="space-y-2">
-                    {selectedMeeting.preferred_datetime && (
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-primary" />
-                        <span className="font-medium">Preferred Time:</span>
-                        <span>{formatDateTime(selectedMeeting.preferred_datetime)}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-primary" />
-                      <span className="font-medium">Status:</span>
-                      <Badge variant={selectedMeeting.status === 'scheduled' ? 'default' : 'secondary'} 
-                             className={selectedMeeting.status === 'scheduled' ? 'bg-green-500' : 'bg-orange-500'}>
-                        {selectedMeeting.status || 'pending'}
-                      </Badge>
-                    </div>
-                    {selectedMeeting.assigned_datetime && (
-                      <div className="flex items-center gap-2">
-                        <CalendarDays className="w-4 h-4 text-green-600" />
-                        <span className="font-medium">Assigned Time:</span>
-                        <span className="text-green-700 font-medium">{formatDateTime(selectedMeeting.assigned_datetime)}</span>
-                      </div>
-                    )}
+                    <Label htmlFor="organization">Organization*</Label>
+                    <Input
+                      id="organization"
+                      value={createMeetingForm.organization}
+                      onChange={(e) => setCreateMeetingForm({...createMeetingForm, organization: e.target.value})}
+                      placeholder="Enter organization"
+                      required
+                    />
                   </div>
                 </div>
 
-                <div className="border-t pt-4 space-y-4">
-                  <div>
-                    <Label className="text-base font-medium mb-2 block">Post-Meeting Notes</Label>
-                    {editingNotes === selectedMeeting.id.toString() ? (
+                <div className="space-y-2">
+                  <Label htmlFor="reason">Reason*</Label>
+                  <Textarea
+                    id="reason"
+                    value={createMeetingForm.reason}
+                    onChange={(e) => setCreateMeetingForm({...createMeetingForm, reason: e.target.value})}
+                    placeholder="Enter meeting reason"
+                    required
+                  />
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={createMeetingForm.email}
+                      onChange={(e) => setCreateMeetingForm({...createMeetingForm, email: e.target.value})}
+                      placeholder="Enter email (optional)"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input
+                      id="phone"
+                      value={createMeetingForm.phone}
+                      onChange={(e) => setCreateMeetingForm({...createMeetingForm, phone: e.target.value})}
+                      placeholder="Enter phone (optional)"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="date">Date*</Label>
+                    <Input
+                      id="date"
+                      type="date"
+                      value={createMeetingForm.date}
+                      onChange={(e) => setCreateMeetingForm({...createMeetingForm, date: e.target.value})}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="start_time">Start Time*</Label>
+                    <Input
+                      id="start_time"
+                      type="time"
+                      value={createMeetingForm.start_time}
+                      onChange={(e) => setCreateMeetingForm({...createMeetingForm, start_time: e.target.value})}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="end_time">End Time*</Label>
+                    <Input
+                      id="end_time"
+                      type="time"
+                      value={createMeetingForm.end_time}
+                      onChange={(e) => setCreateMeetingForm({...createMeetingForm, end_time: e.target.value})}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button 
+                    type="button" 
+                    variant="outline"
+                    onClick={() => setShowCreateDialog(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit">
+                    Create Meeting
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          {/* Meeting Details Dialog */}
+          <Dialog open={showMeetingDialog} onOpenChange={setShowMeetingDialog}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <User className="w-5 h-5" />
+                  Meeting Details
+                </DialogTitle>
+              </DialogHeader>
+              {selectedMeeting && (
+                <div className="space-y-4">
+                  {editingDetails ? (
+                    <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-name">Name</Label>
+                          <Input
+                            id="edit-name"
+                            value={tempDetails.name}
+                            onChange={(e) => setTempDetails({...tempDetails, name: e.target.value})}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-organization">Organization</Label>
+                          <Input
+                            id="edit-organization"
+                            value={tempDetails.organization}
+                            onChange={(e) => setTempDetails({...tempDetails, organization: e.target.value})}
+                          />
+                        </div>
+                      </div>
                       <div className="space-y-2">
+                        <Label htmlFor="edit-reason">Reason</Label>
                         <Textarea
-                          value={tempNotes}
-                          onChange={(e) => setTempNotes(e.target.value)}
-                          placeholder="Add your notes about this meeting..."
+                          id="edit-reason"
+                          value={tempDetails.reason}
+                          onChange={(e) => setTempDetails({...tempDetails, reason: e.target.value})}
                           rows={3}
                         />
-                        <div className="flex gap-2">
-                          <Button onClick={() => saveNotes(selectedMeeting.id)} size="sm">
-                            Save Notes
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => setEditingNotes(null)}
-                          >
-                            Cancel
-                          </Button>
+                      </div>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-email">Email</Label>
+                          <Input
+                            id="edit-email"
+                            type="email"
+                            value={tempDetails.email}
+                            onChange={(e) => setTempDetails({...tempDetails, email: e.target.value})}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-phone">Phone</Label>
+                          <Input
+                            id="edit-phone"
+                            value={tempDetails.phone}
+                            onChange={(e) => setTempDetails({...tempDetails, phone: e.target.value})}
+                          />
                         </div>
                       </div>
-                    ) : (
-                      <div>
-                        {selectedMeeting.comment ? (
-                          <div className="bg-muted p-3 rounded-md mb-2">
-                            <p className="whitespace-pre-wrap">{selectedMeeting.comment}</p>
-                          </div>
-                        ) : (
-                          <p className="text-muted-foreground italic mb-2">No notes added yet</p>
-                        )}
+                      <div className="flex gap-2">
+                        <Button onClick={() => saveDetailsEdit(selectedMeeting.id)} size="sm">
+                          Save Details
+                        </Button>
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          onClick={() => startNotesEdit(selectedMeeting)}
+                          onClick={() => setEditingDetails(false)}
                         >
-                          {selectedMeeting.comment ? "Edit Notes" : "Add Notes"}
+                          Cancel
                         </Button>
                       </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <Label className="text-base font-medium mb-2 flex items-center gap-2">
-                      <PenTool className="w-4 h-4" />
-                      Signature
-                    </Label>
-                    {editingSignature === selectedMeeting.id.toString() ? (
+                    </div>
+                  ) : (
+                    <div className="grid md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Input
-                          value={tempSignature}
-                          onChange={(e) => setTempSignature(e.target.value)}
-                          placeholder="Type your signature or approval (e.g., 'Approved by: John Smith')"
-                        />
-                        <div className="flex gap-2">
-                          <Button onClick={() => saveSignature(selectedMeeting.id)} size="sm">
-                            Save Signature
-                          </Button>
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4 text-primary" />
+                          <span className="font-medium">Name:</span>
+                          <span>{selectedMeeting.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Building2 className="w-4 h-4 text-primary" />
+                          <span className="font-medium">Organization:</span>
+                          <span>{selectedMeeting.organization}</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <MessageSquare className="w-4 h-4 text-primary mt-1" />
+                          <span className="font-medium">Reason:</span>
+                          <span>{selectedMeeting.reason}</span>
+                        </div>
+                        {selectedMeeting.email && (
+                          <div className="flex items-center gap-2">
+                            <Mail className="w-4 h-4 text-primary" />
+                            <span className="font-medium">Email:</span>
+                            <span>{selectedMeeting.email}</span>
+                          </div>
+                        )}
+                        {selectedMeeting.phone && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="w-4 h-4 text-primary" />
+                            <span className="font-medium">Phone:</span>
+                            <span>{selectedMeeting.phone}</span>
+                          </div>
+                        )}
+                        <div className="pt-2">
                           <Button 
                             variant="outline" 
-                            size="sm" 
-                            onClick={() => setEditingSignature(null)}
+                            size="sm"
+                            onClick={() => startDetailsEdit(selectedMeeting)}
                           >
-                            Cancel
+                            <Edit className="w-3 h-3 mr-1" />
+                            Edit Details
                           </Button>
                         </div>
                       </div>
-                    ) : (
-                      <div>
-                        {selectedMeeting.signature ? (
-                          <div className="bg-accent p-3 rounded-md mb-2 border-l-4 border-primary">
-                            <p className="font-medium">{selectedMeeting.signature}</p>
+                      
+                      <div className="space-y-2">
+                        {selectedMeeting.preferred_datetime && (
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-primary" />
+                            <span className="font-medium">Preferred Time:</span>
+                            <span>{formatDateTime(selectedMeeting.preferred_datetime)}</span>
                           </div>
-                        ) : (
-                          <p className="text-muted-foreground italic mb-2">No signature recorded</p>
                         )}
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => startSignatureEdit(selectedMeeting)}
-                        >
-                          {selectedMeeting.signature ? "Update Signature" : "Add Signature"}
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-primary" />
+                          <span className="font-medium">Status:</span>
+                          <Badge variant={selectedMeeting.status === 'scheduled' ? 'default' : 'secondary'} 
+                                 className={selectedMeeting.status === 'scheduled' ? 'bg-green-500' : 'bg-orange-500'}>
+                            {selectedMeeting.status || 'pending'}
+                          </Badge>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <CalendarDays className="w-4 h-4 text-green-600" />
+                            <span className="font-medium">Assigned Time:</span>
+                          </div>
+                          {editingDateTime ? (
+                            <div className="space-y-2 p-3 border rounded-lg bg-muted/20">
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Date</Label>
+                                  <Input
+                                    type="date"
+                                    value={tempDateTime.date}
+                                    onChange={(e) => setTempDateTime({...tempDateTime, date: e.target.value})}
+                                    className="text-sm"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Time</Label>
+                                  <Input
+                                    type="time"
+                                    value={tempDateTime.time}
+                                    onChange={(e) => setTempDateTime({...tempDateTime, time: e.target.value})}
+                                    className="text-sm"
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button onClick={() => saveDateTimeEdit(selectedMeeting.id)} size="sm">
+                                  Save Time
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => setEditingDateTime(false)}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              {selectedMeeting.assigned_datetime ? (
+                                <>
+                                  <span className="text-green-700 font-medium">{formatDateTime(selectedMeeting.assigned_datetime)}</span>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => startDateTimeEdit(selectedMeeting)}
+                                    className="ml-2"
+                                  >
+                                    <Edit className="w-3 h-3" />
+                                  </Button>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="text-muted-foreground italic">Not scheduled</span>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => startDateTimeEdit(selectedMeeting)}
+                                    className="ml-2"
+                                  >
+                                    Schedule
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    )}
+                    </div>
+                  )}
+
+                  <div className="border-t pt-4 space-y-4">
+                    <div>
+                      <Label className="text-base font-medium mb-2 block">Post-Meeting Notes</Label>
+                      {editingNotes === selectedMeeting.id.toString() ? (
+                        <div className="space-y-2">
+                          <Textarea
+                            value={tempNotes}
+                            onChange={(e) => setTempNotes(e.target.value)}
+                            placeholder="Add your notes about this meeting..."
+                            rows={3}
+                          />
+                          <div className="flex gap-2">
+                            <Button onClick={() => saveNotes(selectedMeeting.id)} size="sm">
+                              Save Notes
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => setEditingNotes(null)}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          {selectedMeeting.comment ? (
+                            <div className="bg-muted p-3 rounded-md mb-2">
+                              <p className="whitespace-pre-wrap">{selectedMeeting.comment}</p>
+                            </div>
+                          ) : (
+                            <p className="text-muted-foreground italic mb-2">No notes added yet</p>
+                          )}
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => startNotesEdit(selectedMeeting)}
+                          >
+                            {selectedMeeting.comment ? "Edit Notes" : "Add Notes"}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label className="text-base font-medium mb-2 flex items-center gap-2">
+                        <PenTool className="w-4 h-4" />
+                        Signature
+                      </Label>
+                      {editingSignature === selectedMeeting.id.toString() ? (
+                        <div className="space-y-2">
+                          <Input
+                            value={tempSignature}
+                            onChange={(e) => setTempSignature(e.target.value)}
+                            placeholder="Type your signature or approval (e.g., 'Approved by: John Smith')"
+                          />
+                          <div className="flex gap-2">
+                            <Button onClick={() => saveSignature(selectedMeeting.id)} size="sm">
+                              Save Signature
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => setEditingSignature(null)}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          {selectedMeeting.signature ? (
+                            <div className="bg-accent p-3 rounded-md mb-2 border-l-4 border-primary">
+                              <p className="font-medium">{selectedMeeting.signature}</p>
+                            </div>
+                          ) : (
+                            <p className="text-muted-foreground italic mb-2">No signature recorded</p>
+                          )}
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => startSignatureEdit(selectedMeeting)}
+                          >
+                            {selectedMeeting.signature ? "Update Signature" : "Add Signature"}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-4">
+                      <Button 
+                        variant="destructive" 
+                        onClick={() => {
+                          deleteMeeting(selectedMeeting.id);
+                          setShowMeetingDialog(false);
+                        }}
+                        className="flex items-center gap-2"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Delete Meeting
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          )}
+                      
+              )}
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </div>
