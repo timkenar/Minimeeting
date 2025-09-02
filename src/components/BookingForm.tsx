@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Clock, User, Building2 } from "lucide-react";
+import { User, Building2, Mail, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Meeting {
@@ -20,116 +20,89 @@ const BookingForm = () => {
     name: "",
     organization: "",
     reason: "",
-    preferredDateTime: ""
+    email: "",
+    phone: ""
   });
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Create meeting object
-    const meeting: Meeting = {
-      id: Date.now().toString(),
-      ...formData,
-      dateTime: formData.preferredDateTime,
-      createdAt: new Date().toISOString()
-    };
+    try {
+      const response = await fetch('http://localhost:8000/meetings/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          organization: formData.organization,
+          reason: formData.reason,
+          email: formData.email,
+          phone: formData.phone,
+          signature: ""
+        }),
+      });
 
-    // Store in localStorage for now
-    const existingMeetings = JSON.parse(localStorage.getItem('meetings') || '[]');
-    localStorage.setItem('meetings', JSON.stringify([...existingMeetings, meeting]));
+      if (!response.ok) {
+        throw new Error('Failed to create meeting');
+      }
 
-    // Generate ICS file
-    generateICSFile(meeting);
-    
-    // Generate Google Calendar link
-    const googleCalendarLink = generateGoogleCalendarLink(meeting);
-    
-    toast({
-      title: "Meeting Scheduled!",
-      description: (
-        <div className="space-y-2">
-          <p>Your meeting has been scheduled successfully.</p>
-          <div className="flex gap-2">
-            <a 
-              href={googleCalendarLink} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-primary hover:underline text-sm"
-            >
-              Add to Google Calendar
-            </a>
+      const result = await response.json();
+      
+      toast({
+        title: "Meeting Scheduled!",
+        description: (
+          <div className="space-y-2">
+            <p>Your meeting has been scheduled successfully.</p>
+            <div className="flex gap-2">
+              <a 
+                href={result.google_calendar_link} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-primary hover:underline text-sm"
+              >
+                Add to Google Calendar
+              </a>
+              <a 
+                href={`http://localhost:8000${result.ics_download_url}`} 
+                className="text-primary hover:underline text-sm"
+              >
+                Download ICS
+              </a>
+            </div>
           </div>
-        </div>
-      ),
-    });
+        ),
+      });
 
-    // Reset form
-    setFormData({
-      name: "",
-      organization: "",
-      reason: "",
-      preferredDateTime: ""
-    });
+      // Reset form
+      setFormData({
+        name: "",
+        organization: "",
+        reason: "",
+        email: "",
+        phone: ""
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to schedule meeting. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const generateICSFile = (meeting: Meeting) => {
-    const startDate = new Date(meeting.dateTime);
-    const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // 1 hour later
-    
-    const formatDate = (date: Date) => {
-      return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    };
-
-    const icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//MiniMeet//EN
-BEGIN:VEVENT
-UID:${meeting.id}@minimeet.app
-DTSTAMP:${formatDate(new Date())}
-DTSTART:${formatDate(startDate)}
-DTEND:${formatDate(endDate)}
-SUMMARY:Meeting with ${meeting.name}
-DESCRIPTION:${meeting.reason}
-LOCATION:${meeting.organization}
-END:VEVENT
-END:VCALENDAR`;
-
-    const blob = new Blob([icsContent], { type: 'text/calendar' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `meeting-${meeting.name.replace(/\s+/g, '-')}.ics`;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const generateGoogleCalendarLink = (meeting: Meeting) => {
-    const startDate = new Date(meeting.dateTime);
-    const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
-    
-    const formatDateForGoogle = (date: Date) => {
-      return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    };
-
-    const params = new URLSearchParams({
-      action: 'TEMPLATE',
-      text: `Meeting with ${meeting.name}`,
-      dates: `${formatDateForGoogle(startDate)}/${formatDateForGoogle(endDate)}`,
-      details: meeting.reason,
-      location: meeting.organization
-    });
-
-    return `https://calendar.google.com/calendar/render?${params.toString()}`;
-  };
 
   return (
     <div className="min-h-screen bg-gradient-hero flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-elegant">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-primary">Schedule a Meeting</CardTitle>
+          <div className="flex justify-center mb-4">
+            <img src="/logo.png" alt="Company Logo" className="h-16 w-auto" />
+          </div>
+          <CardTitle className="text-2xl font-bold text-primary">Request a Meeting</CardTitle>
           <CardDescription>
-            Book your appointment and get calendar integration instantly
+            Submit your meeting request and our admin will schedule a time for you
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -174,23 +147,35 @@ END:VCALENDAR`;
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="datetime" className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                <Clock className="w-4 h-4" />
-                Preferred Date & Time
+              <Label htmlFor="email" className="flex items-center gap-2">
+                <Mail className="w-4 h-4" />
+                Email Address (Optional)
               </Label>
               <Input
-                id="datetime"
-                type="datetime-local"
-                value={formData.preferredDateTime}
-                onChange={(e) => setFormData(prev => ({ ...prev, preferredDateTime: e.target.value }))}
-                min={new Date().toISOString().slice(0, 16)}
-                required
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="your.email@example.com"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phone" className="flex items-center gap-2">
+                <Phone className="w-4 h-4" />
+                Phone Number (Optional)
+              </Label>
+              <Input
+                id="phone"
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                placeholder="+1 (555) 123-4567"
               />
             </div>
 
             <Button type="submit" className="w-full bg-gradient-primary shadow-elegant">
-              Schedule Meeting
+              Submit Meeting Request
             </Button>
           </form>
         </CardContent>
