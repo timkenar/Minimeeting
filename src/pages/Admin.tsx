@@ -1,9 +1,13 @@
 import AdminDashboard from "@/components/AdminDashboard";
 
-const Admin = () => {
+interface AdminProps {
+  onAuthChange?: (isAuthenticated: boolean) => void;
+}
+
+const Admin = ({ onAuthChange }: AdminProps) => {
   return (
     <div className="pt-0">
-      <AdminDashboard />
+      <AdminDashboard onAuthChange={onAuthChange} />
     </div>
   );
 };

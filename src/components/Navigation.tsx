@@ -1,13 +1,20 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, LogIn, Moon, Sun, Home, Users } from "lucide-react";
+import { Calendar, LogIn, Moon, Sun, Home, Users, LogOut, Menu, X } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useState } from "react";
 
-const Navigation = () => {
+interface NavigationProps {
+  onLogout?: () => void;
+  isAuthenticated?: boolean;
+}
+
+const Navigation = ({ onLogout, isAuthenticated }: NavigationProps) => {
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
   const isLandingPage = location.pathname === "/";
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   if (isLandingPage) {
     // Minimal navigation for landing page
@@ -45,50 +52,25 @@ const Navigation = () => {
     );
   }
   
-  // Full navigation for admin pages
+  // Clean minimal navigation for admin pages
   return (
-    <nav className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border sticky top-0 z-50">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo/Brand */}
+    <nav className="bg-background/95 backdrop-blur border-b border-border sticky top-0 z-50">
+      <div className="px-4">
+        <div className="flex items-center justify-between h-12 sm:h-14">
+          {/* Logo/Brand - Minimal */}
           <div className="flex items-center gap-2">
-            <Calendar className="w-8 h-8 text-primary" />
-            <span className="text-xl font-bold text-foreground">Appointment</span>
-            <Badge variant="secondary" className="text-xs">v1.0</Badge>
+            <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+            <span className="text-base sm:text-lg font-bold text-foreground">MiniMeet</span>
           </div>
 
-          {/* Navigation Links */}
-          <div className="flex items-center gap-4">
-            <Link to="/">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex items-center gap-2"
-              >
-                <Home className="w-4 h-4" />
-                Book Meeting
-              </Button>
-            </Link>
-            
-            <Button
-              variant="default"
-              size="sm"
-              className="flex items-center gap-2"
-              disabled
-            >
-              <Users className="w-4 h-4" />
-              Admin Dashboard
-            </Button>
-          </div>
-
-          {/* Right side controls */}
-          <div className="flex items-center gap-2">
+          {/* Right side controls - Clean */}
+          <div className="flex items-center gap-1">
             {/* Theme Toggle */}
             <Button
               variant="ghost"
               size="sm"
               onClick={toggleTheme}
-              className="flex items-center gap-2"
+              className="w-8 h-8 p-0"
               title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
             >
               {theme === 'light' ? (
@@ -97,6 +79,19 @@ const Navigation = () => {
                 <Sun className="w-4 h-4" />
               )}
             </Button>
+
+            {/* Logout Button */}
+            {isAuthenticated && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onLogout}
+                className="w-8 h-8 p-0 text-destructive hover:text-destructive-foreground hover:bg-destructive"
+                title="Logout"
+              >
+                <LogOut className="w-4 h-4" />
+              </Button>
+            )}
           </div>
         </div>
       </div>

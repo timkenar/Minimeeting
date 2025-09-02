@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Calendar, Clock, User, Building2, MessageSquare, PenTool, LogIn, CalendarDays, ChevronLeft, ChevronRight, Edit, Trash2, Mail, Phone, Plus } from "lucide-react";
+import { Calendar, Clock, User, Building2, MessageSquare, PenTool, LogIn, CalendarDays, ChevronLeft, ChevronRight, Edit, Trash2, Mail, Phone, Plus, Menu, X, Users, Home } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CalendarView from "./CalendarView";
 
@@ -60,6 +60,9 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
   const [tempDateTime, setTempDateTime] = useState({ date: '', time: '' });
   const [editingDetails, setEditingDetails] = useState(false);
   const [tempDetails, setTempDetails] = useState({ name: '', organization: '', reason: '', email: '', phone: '' });
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [calendarExpanded, setCalendarExpanded] = useState(true);
+  const [mobileView, setMobileView] = useState<'calendar' | 'requests'>('calendar');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -553,10 +556,10 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
               const isAvailable = isTimeSlotAvailable(hour);
               
               return (
-                <div key={hour} className={`flex items-center gap-4 p-3 rounded-lg border ${
+                <div key={hour} className={`flex items-center gap-2 sm:gap-4 p-2 sm:p-3 rounded-lg border ${
                   !isAvailable ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'
                 }`}>
-                  <div className="w-20 text-sm font-medium">
+                  <div className="w-16 sm:w-20 text-xs sm:text-sm font-medium">
                     {hour > 12 ? hour - 12 : hour}:00 {hour >= 12 ? 'PM' : 'AM'}
                   </div>
                   <div className="flex-1">
@@ -596,8 +599,8 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
                     ) : (
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">Available</Badge>
-                          <span className="text-sm text-muted-foreground">Open slot</span>
+                          <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300 text-xs">Available</Badge>
+                          <span className="text-xs sm:text-sm text-muted-foreground">Open slot</span>
                         </div>
                         <Button
                           variant="ghost"
@@ -650,7 +653,7 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-8 gap-1 text-sm">
+          <div className="grid grid-cols-8 gap-1 text-xs sm:text-sm overflow-x-auto">
             <div className="p-2"></div>
             {days.map(day => (
               <div key={day.toISOString()} className="text-center font-medium p-2 bg-muted/30 rounded">
@@ -670,7 +673,7 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
                   const isAvailable = !scheduledMeeting;
                   
                   return (
-                    <div key={`${day.toISOString()}-${hour}`} className={`border rounded p-1 min-h-[60px] ${
+                    <div key={`${day.toISOString()}-${hour}`} className={`border rounded p-1 min-h-[40px] sm:min-h-[60px] ${
                       !isAvailable ? 'bg-red-100 border-red-300' : 'bg-white border-gray-200 hover:bg-green-50'
                     }`}>
                       {scheduledMeeting ? (
@@ -682,7 +685,7 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
                           }}
                         >
                           <div className="text-xs font-medium text-red-700 truncate">{scheduledMeeting.name}</div>
-                          <div className="text-xs text-red-600 truncate">{scheduledMeeting.organization}</div>
+                          <div className="text-xs text-red-600 truncate lg:block hidden">{scheduledMeeting.organization}</div>
                         </div>
                       ) : selectedMeeting ? (
                         <Button 
@@ -756,10 +759,10 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-7 gap-1">
-            {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(day => (
-              <div key={day} className="text-center font-medium p-3 bg-primary/10 rounded-t">
-                <span className="text-sm">{day}</span>
+          <div className="grid grid-cols-7 gap-1 text-xs sm:text-sm">
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => (
+              <div key={day} className="text-center font-medium p-1 sm:p-3 bg-primary/10 rounded-t">
+                <span className="text-xs sm:text-sm">{day}</span>
               </div>
             ))}
             {days.map(day => {
@@ -769,11 +772,11 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
               return (
                 <div 
                   key={day.toISOString()} 
-                  className={`border rounded p-2 min-h-[120px] ${
+                  className={`border rounded p-1 sm:p-2 min-h-[80px] sm:min-h-[120px] ${
                     !isCurrentMonth ? 'bg-muted/30 text-muted-foreground' : 'bg-white'
                   }`}
                 >
-                  <div className="text-sm font-bold mb-2">{day.getDate()}</div>
+                  <div className="text-xs sm:text-sm font-bold mb-1 sm:mb-2">{day.getDate()}</div>
                   
                   <div className="space-y-1">
                     {dayMeetings.map(meeting => (
@@ -785,8 +788,8 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
                           setShowMeetingDialog(true);
                         }}
                       >
-                        <div className="font-medium truncate">{meeting.name}</div>
-                        <div className="text-xs">{new Date(meeting.assigned_datetime!).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</div>
+                        <div className="font-medium truncate text-xs">{meeting.name}</div>
+                        <div className="text-xs hidden sm:block">{new Date(meeting.assigned_datetime!).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</div>
                       </div>
                     ))}
                     
@@ -822,7 +825,7 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
                         title="Create new meeting"
                       >
                         <Plus className="w-3 h-3 text-green-600 mr-1" />
-                        Add Meeting
+                        <span className="hidden sm:inline">Add Meeting</span>
                       </Button>
                     )}
                   </div>
@@ -878,12 +881,15 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
 
   return (
     <div className="bg-background">
-      <div className="flex min-h-[calc(100vh-4rem)]">
+      <div className="flex flex-col lg:flex-row min-h-screen">
+
         {/* Sidebar */}
-        <div className="w-80 bg-muted/50 border-r p-6 overflow-y-auto">
-          <div className="mb-6">
-            <h2 className="text-xl font-bold mb-2">Meeting Requests</h2>
-            <p className="text-sm text-muted-foreground">Manage and assign meeting times</p>
+        <div className={`w-full lg:w-80 bg-muted/50 border-r p-3 lg:p-6 overflow-y-auto ${
+          mobileView === 'requests' ? 'block lg:block' : 'hidden lg:block'
+        }`}>
+          <div className="mb-4 lg:mb-6">
+            <h2 className="text-lg lg:text-xl font-bold mb-1 lg:mb-2">Requests</h2>
+            <p className="text-xs lg:text-sm text-muted-foreground hidden sm:block">Manage and assign meeting times</p>
           </div>
           
           <div className="space-y-4">
@@ -906,44 +912,64 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
                     setSelectedMeeting(meeting);
                   }}
                 >
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-medium truncate">{meeting.name}</h3>
+                  <CardContent className="p-3 lg:p-4">
+                    <div className="flex items-center justify-between mb-1 lg:mb-2">
+                      <h3 className="text-sm lg:text-base font-medium truncate">{meeting.name}</h3>
                       <Badge variant={meeting.status === 'scheduled' ? 'default' : meeting.status === 'completed' ? 'outline' : 'secondary'} 
-                             className={meeting.status === 'scheduled' ? 'bg-green-500' : meeting.status === 'completed' ? 'bg-blue-500' : 'bg-orange-500'}>
+                             className={`text-xs ${meeting.status === 'scheduled' ? 'bg-green-500' : meeting.status === 'completed' ? 'bg-blue-500' : 'bg-orange-500'}`}>
                         {meeting.status || 'pending'}
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-2 truncate">{meeting.organization}</p>
+                    <p className="text-xs lg:text-sm text-muted-foreground mb-1 lg:mb-2 truncate">{meeting.organization}</p>
                     <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        Requested: {new Date(meeting.created_at).toLocaleDateString()}
-                      </p>
-                      {meeting.preferred_datetime && (
+                      {/* Mobile: Only show essential info */}
+                      <div className="lg:hidden">
+                        {meeting.assigned_datetime ? (
+                          <p className="text-xs text-green-700 font-medium">
+                            {new Date(meeting.assigned_datetime).toLocaleDateString()}
+                          </p>
+                        ) : meeting.preferred_datetime ? (
+                          <p className="text-xs text-orange-600">
+                            Prefers: {new Date(meeting.preferred_datetime).toLocaleDateString()}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(meeting.created_at).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+                      
+                      {/* Desktop: Full details */}
+                      <div className="hidden lg:block space-y-1">
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          Preferred: {formatDateTime(meeting.preferred_datetime)}
+                          <Clock className="w-3 h-3" />
+                          Requested: {new Date(meeting.created_at).toLocaleDateString()}
                         </p>
-                      )}
-                      {meeting.email && (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Mail className="w-3 h-3" />
-                          {meeting.email}
-                        </p>
-                      )}
-                      {meeting.phone && (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Phone className="w-3 h-3" />
-                          {meeting.phone}
-                        </p>
-                      )}
-                      {meeting.assigned_datetime && (
-                        <p className="text-xs text-green-700 flex items-center gap-1 font-medium">
-                          <CalendarDays className="w-3 h-3" />
-                          Scheduled: {formatDateTime(meeting.assigned_datetime)}
-                        </p>
-                      )}
+                        {meeting.preferred_datetime && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            Preferred: {formatDateTime(meeting.preferred_datetime)}
+                          </p>
+                        )}
+                        {meeting.email && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Mail className="w-3 h-3" />
+                            {meeting.email}
+                          </p>
+                        )}
+                        {meeting.phone && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Phone className="w-3 h-3" />
+                            {meeting.phone}
+                          </p>
+                        )}
+                        {meeting.assigned_datetime && (
+                          <p className="text-xs text-green-700 flex items-center gap-1 font-medium">
+                            <CalendarDays className="w-3 h-3" />
+                            Scheduled: {formatDateTime(meeting.assigned_datetime)}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -953,14 +979,45 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 p-6" onClick={() => setSelectedMeeting(null)}>
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
-            <p className="text-muted-foreground">Assign meeting times and manage appointments</p>
+        <div className={`flex-1 p-3 lg:p-6 pb-24 lg:pb-6 ${
+          mobileView === 'calendar' ? 'block lg:block' : 'hidden lg:block'
+        }`} onClick={() => setSelectedMeeting(null)}>
+          <div className="mb-3 lg:mb-6">
+            <h1 className="text-lg sm:text-xl lg:text-3xl font-bold mb-1 lg:mb-2">Dashboard</h1>
+            <p className="text-xs sm:text-sm lg:text-base text-muted-foreground hidden sm:block">Assign meeting times and manage appointments</p>
           </div>
 
           <Tabs value={calendarView} onValueChange={(value) => setCalendarView(value as 'day' | 'week' | 'month' | 'calendar')}>
-            <div className="flex items-center justify-between mb-6">
+            {/* Mobile: Simplified header */}
+            <div className="lg:hidden mb-3">
+              <div className="flex items-center justify-between">
+                <TabsList className="grid grid-cols-4 text-xs">
+                  <TabsTrigger value="calendar">Cal</TabsTrigger>
+                  <TabsTrigger value="day">Day</TabsTrigger>
+                  <TabsTrigger value="week">Week</TabsTrigger>
+                  <TabsTrigger value="month">Month</TabsTrigger>
+                </TabsList>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="sm" onClick={() => navigateDate('prev')} className="w-8 h-8 p-0">
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => navigateDate('next')} className="w-8 h-8 p-0">
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+              <h2 className="text-xs text-center mt-2 text-muted-foreground">
+                {calendarView === 'month' 
+                  ? currentDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+                  : calendarView === 'week'
+                  ? `${currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                  : currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                }
+              </h2>
+            </div>
+            
+            {/* Desktop: Full header */}
+            <div className="hidden lg:flex items-center justify-between mb-6">
               <TabsList>
                 <TabsTrigger value="calendar">Calendar</TabsTrigger>
                 <TabsTrigger value="day">Day</TabsTrigger>
@@ -1008,10 +1065,10 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
 
             <TabsContent value="day" className="mt-0">
               {!selectedMeeting && (
-                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm text-blue-700 flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4" />
-                    Select a meeting request from the sidebar to assign a time slot
+                <div className="mb-2 lg:mb-4 p-2 lg:p-3 bg-blue-50 border border-blue-200 rounded-lg hidden lg:block">
+                  <p className="text-xs sm:text-sm text-blue-700 flex items-center gap-2">
+                    <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4" />
+                    Select a meeting request to assign a time slot
                   </p>
                 </div>
               )}
@@ -1020,10 +1077,10 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
             
             <TabsContent value="week" className="mt-0">
               {!selectedMeeting && (
-                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm text-blue-700 flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4" />
-                    Select a meeting request from the sidebar to assign a time slot
+                <div className="mb-2 lg:mb-4 p-2 lg:p-3 bg-blue-50 border border-blue-200 rounded-lg hidden lg:block">
+                  <p className="text-xs sm:text-sm text-blue-700 flex items-center gap-2">
+                    <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4" />
+                    Select a meeting request to assign a time slot
                   </p>
                 </div>
               )}
@@ -1032,10 +1089,10 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
             
             <TabsContent value="month" className="mt-0">
               {!selectedMeeting && (
-                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm text-blue-700 flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4" />
-                    Select a meeting request from the sidebar to assign a time slot
+                <div className="mb-2 lg:mb-4 p-2 lg:p-3 bg-blue-50 border border-blue-200 rounded-lg hidden lg:block">
+                  <p className="text-xs sm:text-sm text-blue-700 flex items-center gap-2">
+                    <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4" />
+                    Select a meeting request to assign a time slot
                   </p>
                 </div>
               )}
@@ -1046,7 +1103,7 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
 
           {/* Create Meeting Dialog */}
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <Plus className="w-5 h-5" />
@@ -1166,7 +1223,7 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
 
           {/* Meeting Details Dialog */}
           <Dialog open={showMeetingDialog} onOpenChange={setShowMeetingDialog}>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <User className="w-5 h-5" />
@@ -1478,6 +1535,79 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
               )}
             </DialogContent>
           </Dialog>
+
+          {/* Mobile Bottom Menu */}
+          <div className="fixed bottom-0 left-0 right-0 lg:hidden bg-background/95 backdrop-blur border-t border-border z-40">
+            <div className="flex items-end justify-between py-3 px-6 relative">
+              {/* Today */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setCurrentDate(new Date());
+                  setMobileView('calendar');
+                }}
+                className="flex flex-col items-center gap-1 h-auto py-2 px-3"
+                title="Today"
+              >
+                <Clock className="w-5 h-5" />
+                <span className="text-xs">Today</span>
+              </Button>
+              
+              {/* Calendar */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setMobileView('calendar')}
+                className={`flex flex-col items-center gap-1 h-auto py-2 px-3 ${
+                  mobileView === 'calendar' ? 'text-primary bg-primary/10 rounded-lg' : ''
+                }`}
+                title="Calendar View"
+              >
+                <Calendar className="w-5 h-5" />
+                <span className="text-xs">Calendar</span>
+              </Button>
+              
+              {/* Plus (Center - Large Semicircular) */}
+              <div className="absolute left-1/2 transform -translate-x-1/2 -top-6">
+                <Button
+                  variant="default"
+                  size="lg"
+                  onClick={() => openCreateMeetingDialog(new Date())}
+                  className="w-16 h-16 rounded-full bg-gradient-to-t from-primary to-primary-glow hover:from-primary/90 hover:to-primary-glow/90 shadow-xl border-4 border-background flex items-center justify-center"
+                  title="Create Meeting"
+                >
+                  <Plus className="w-8 h-8 text-primary-foreground" />
+                </Button>
+              </div>
+              
+              {/* Requests */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setMobileView('requests')}
+                className={`flex flex-col items-center gap-1 h-auto py-2 px-3 ${
+                  mobileView === 'requests' ? 'text-primary bg-primary/10 rounded-lg' : ''
+                }`}
+                title="Meeting Requests"
+              >
+                <Users className="w-5 h-5" />
+                <span className="text-xs">Requests</span>
+              </Button>
+              
+              {/* Book Meeting */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => window.location.href = '/'}
+                className="flex flex-col items-center gap-1 h-auto py-2 px-3"
+                title="Book Meeting"
+              >
+                <MessageSquare className="w-5 h-5" />
+                <span className="text-xs">Book</span>
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
