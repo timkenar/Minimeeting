@@ -36,7 +36,17 @@ const AdminDashboard = () => {
   const [password, setPassword] = useState("");
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [calendarView, setCalendarView] = useState<'day' | 'week' | 'month' | 'calendar'>('calendar');
+  const [calendarView, setCalendarView] = useState<'day' | 'week' | 'month' | 'calendar' | 'create'>('calendar');
+  const [createMeetingForm, setCreateMeetingForm] = useState({
+    name: '',
+    organization: '',
+    reason: '',
+    email: '',
+    phone: '',
+    date: '',
+    start_time: '',
+    end_time: ''
+  });
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
   const { toast } = useToast();
 
@@ -331,6 +341,53 @@ const AdminDashboard = () => {
     const newDate = new Date(currentDate);
     newDate.setDate(currentDate.getDate() + (direction === 'next' ? days : -days));
     setCurrentDate(newDate);
+  };
+
+  const handleCreateMeeting = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      const response = await fetch('http://localhost:8000/meetings/admin/create/', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(createMeetingForm),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        await loadMeetings();
+        setCreateMeetingForm({
+          name: '',
+          organization: '',
+          reason: '',
+          email: '',
+          phone: '',
+          date: '',
+          start_time: '',
+          end_time: ''
+        });
+        toast({
+          title: "Meeting created",
+          description: `Meeting with ${data.meeting_details.name} has been scheduled successfully.`
+        });
+      } else {
+        const errorData = await response.json();
+        toast({
+          title: "Failed to create meeting",
+          description: Object.values(errorData).flat().join(', '),
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to connect to server",
+        variant: "destructive"
+      });
+    }
   };
 
   const CalendarDayView = ({ date, meetings, onAssignMeeting, selectedMeeting }: {
@@ -788,13 +845,14 @@ const AdminDashboard = () => {
             </Button>
           </div>
 
-          <Tabs value={calendarView} onValueChange={(value) => setCalendarView(value as 'day' | 'week' | 'month' | 'calendar')}>
+          <Tabs value={calendarView} onValueChange={(value) => setCalendarView(value as 'day' | 'week' | 'month' | 'calendar' | 'create')}>
             <div className="flex items-center justify-between mb-6">
               <TabsList>
                 <TabsTrigger value="calendar">Calendar</TabsTrigger>
                 <TabsTrigger value="day">Day</TabsTrigger>
                 <TabsTrigger value="week">Week</TabsTrigger>
                 <TabsTrigger value="month">Month</TabsTrigger>
+                <TabsTrigger value="create">Create Meeting</TabsTrigger>
               </TabsList>
               
               <div className="flex items-center gap-4">
@@ -862,6 +920,133 @@ const AdminDashboard = () => {
                 </div>
               )}
               <CalendarMonthView date={currentDate} meetings={meetings} onAssignMeeting={assignMeetingTime} selectedMeeting={selectedMeeting} />
+            </TabsContent>
+
+            <TabsContent value="create" className="mt-0">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="w-5 h-5" />
+                    Create Meeting Manually
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleCreateMeeting} className="space-y-4">
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Name*</Label>
+                        <Input
+                          id="name"
+                          value={createMeetingForm.name}
+                          onChange={(e) => setCreateMeetingForm({...createMeetingForm, name: e.target.value})}
+                          placeholder="Enter attendee name"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="organization">Organization*</Label>
+                        <Input
+                          id="organization"
+                          value={createMeetingForm.organization}
+                          onChange={(e) => setCreateMeetingForm({...createMeetingForm, organization: e.target.value})}
+                          placeholder="Enter organization"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="reason">Reason*</Label>
+                      <Textarea
+                        id="reason"
+                        value={createMeetingForm.reason}
+                        onChange={(e) => setCreateMeetingForm({...createMeetingForm, reason: e.target.value})}
+                        placeholder="Enter meeting reason"
+                        required
+                      />
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={createMeetingForm.email}
+                          onChange={(e) => setCreateMeetingForm({...createMeetingForm, email: e.target.value})}
+                          placeholder="Enter email (optional)"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone</Label>
+                        <Input
+                          id="phone"
+                          value={createMeetingForm.phone}
+                          onChange={(e) => setCreateMeetingForm({...createMeetingForm, phone: e.target.value})}
+                          placeholder="Enter phone (optional)"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="date">Date*</Label>
+                        <Input
+                          id="date"
+                          type="date"
+                          value={createMeetingForm.date}
+                          onChange={(e) => setCreateMeetingForm({...createMeetingForm, date: e.target.value})}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="start_time">Start Time*</Label>
+                        <Input
+                          id="start_time"
+                          type="time"
+                          value={createMeetingForm.start_time}
+                          onChange={(e) => setCreateMeetingForm({...createMeetingForm, start_time: e.target.value})}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="end_time">End Time*</Label>
+                        <Input
+                          id="end_time"
+                          type="time"
+                          value={createMeetingForm.end_time}
+                          onChange={(e) => setCreateMeetingForm({...createMeetingForm, end_time: e.target.value})}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2">
+                      <Button 
+                        type="button" 
+                        variant="outline"
+                        onClick={() => {
+                          setCreateMeetingForm({
+                            name: '',
+                            organization: '',
+                            reason: '',
+                            email: '',
+                            phone: '',
+                            date: '',
+                            start_time: '',
+                            end_time: ''
+                          });
+                        }}
+                      >
+                        Clear Form
+                      </Button>
+                      <Button type="submit">
+                        Create Meeting
+                      </Button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
 
