@@ -39,8 +39,21 @@ All colors MUST be HSL.
 
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
     --gradient-hero: linear-gradient(135deg, hsl(217 89% 61%) 0%, hsl(217 89% 71%) 100%);
+    --gradient-subtle: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--muted) / 0.3) 100%);
     --shadow-elegant: 0 4px 20px -4px hsl(var(--primary) / 0.2);
     --shadow-soft: 0 2px 8px -2px hsl(218 27% 12% / 0.1);
+
+    /* Calendar colors */
+    --calendar-pending: 39 84% 56%;
+    --calendar-scheduled: 217 89% 61%;
+    --calendar-completed: 142 76% 36%;
+    --calendar-header: var(--foreground);
+    --calendar-day: var(--foreground);
+    --calendar-muted: var(--muted-foreground);
+    --calendar-today: var(--primary);
+    --calendar-border: var(--border);
+    --calendar-border-muted: hsl(var(--border) / 0.5);
+    --calendar-hover: hsl(var(--accent) / 0.5);
 
     --radius: 0.5rem;
 
@@ -57,8 +70,11 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 240 5.9% 10%;
 
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
+    
+    /* Light mode calendar specific */
+    --calendar-cell-bg: 0 0% 100%;
+    --calendar-cell-outside: hsl(var(--muted) / 0.3);
   }
 
   .dark {
@@ -97,6 +113,11 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    
+    /* Dark mode calendar overrides */
+    --calendar-cell-bg: hsl(var(--card));
+    --calendar-cell-outside: hsl(var(--muted) / 0.2);
+    --calendar-hover: hsl(var(--accent) / 0.3);
   }
 }
 
@@ -107,5 +128,44 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  /* Calendar component styles */
+  .calendar-card {
+    @apply bg-card border-calendar-border shadow-soft rounded-xl;
+  }
+  
+  .calendar-nav-button {
+    @apply hover:bg-calendar-hover rounded-lg transition-colors duration-200;
+  }
+  
+  .calendar-today {
+    @apply bg-primary text-primary-foreground font-semibold;
+  }
+  
+  .calendar-today-button {
+    @apply border-calendar-border hover:bg-calendar-hover;
+  }
+  
+  .calendar-day-cell {
+    @apply bg-calendar-cell-bg hover:shadow-soft;
+  }
+  
+  .calendar-day-outside {
+    @apply bg-calendar-cell-outside;
+  }
+  
+  .calendar-today-cell {
+    @apply ring-2 ring-primary ring-opacity-50 bg-gradient-to-br from-primary/5 to-primary/10;
+  }
+  
+  .calendar-event-card {
+    @apply bg-card border border-calendar-border hover:shadow-soft transition-all duration-200;
+  }
+  
+  .calendar-event-item {
+    @apply hover:scale-105 transition-transform duration-200;
   }
 }

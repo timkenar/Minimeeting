@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, User, Building2, MessageSquare, PenTool, LogIn, CalendarDays, ChevronLeft, ChevronRight, LogOut, Edit, Trash2, Mail, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import CalendarView from "./CalendarView";
 
 interface Meeting {
   id: number;
@@ -35,7 +36,7 @@ const AdminDashboard = () => {
   const [password, setPassword] = useState("");
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [calendarView, setCalendarView] = useState<'day' | 'week' | 'month'>('week');
+  const [calendarView, setCalendarView] = useState<'day' | 'week' | 'month' | 'calendar'>('calendar');
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
   const { toast } = useToast();
 
@@ -787,9 +788,10 @@ const AdminDashboard = () => {
             </Button>
           </div>
 
-          <Tabs value={calendarView} onValueChange={(value) => setCalendarView(value as 'day' | 'week' | 'month')}>
+          <Tabs value={calendarView} onValueChange={(value) => setCalendarView(value as 'day' | 'week' | 'month' | 'calendar')}>
             <div className="flex items-center justify-between mb-6">
               <TabsList>
+                <TabsTrigger value="calendar">Calendar</TabsTrigger>
                 <TabsTrigger value="day">Day</TabsTrigger>
                 <TabsTrigger value="week">Week</TabsTrigger>
                 <TabsTrigger value="month">Month</TabsTrigger>
@@ -817,6 +819,14 @@ const AdminDashboard = () => {
                 </Button>
               </div>
             </div>
+
+            <TabsContent value="calendar" className="mt-0">
+              <CalendarView 
+                meetings={meetings} 
+                onMeetingSelect={setSelectedMeeting}
+                selectedMeeting={selectedMeeting}
+              />
+            </TabsContent>
 
             <TabsContent value="day" className="mt-0">
               {!selectedMeeting && (

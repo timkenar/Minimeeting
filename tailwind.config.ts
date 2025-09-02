@@ -62,11 +62,26 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				calendar: {
+					pending: 'hsl(var(--calendar-pending))',
+					scheduled: 'hsl(var(--calendar-scheduled))',
+					completed: 'hsl(var(--calendar-completed))',
+					header: 'hsl(var(--calendar-header))',
+					day: 'hsl(var(--calendar-day))',
+					muted: 'hsl(var(--calendar-muted))',
+					today: 'hsl(var(--calendar-today))',
+					border: 'hsl(var(--calendar-border))',
+					'border-muted': 'hsl(var(--calendar-border-muted))',
+					hover: 'hsl(var(--calendar-hover))',
+					'cell-bg': 'hsl(var(--calendar-cell-bg))',
+					'cell-outside': 'hsl(var(--calendar-cell-outside))'
 				}
 			},
 			backgroundImage: {
 				'gradient-primary': 'var(--gradient-primary)',
-				'gradient-hero': 'var(--gradient-hero)'
+				'gradient-hero': 'var(--gradient-hero)',
+				'gradient-subtle': 'var(--gradient-subtle)'
 			},
 			boxShadow: {
 				'elegant': 'var(--shadow-elegant)',
