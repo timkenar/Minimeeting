@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Calendar, Clock, User, Building2, MessageSquare, PenTool, LogIn, CalendarDays, ChevronLeft, ChevronRight, Edit, Trash2, Mail, Phone, Plus, Menu, X, Users, Home } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CalendarView from "./CalendarView";
+import { AppSidebar } from "./AppSidebar";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 interface Meeting {
   id: number;
@@ -117,6 +119,7 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
       if (response.ok) {
         const data = await response.json();
         setAccessToken(data.access);
+        localStorage.setItem('accessToken', data.access);
         setIsAuthenticated(true);
         onAuthChange?.(true);
         toast({
@@ -372,6 +375,7 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
       // Ignore logout errors
     }
 
+    localStorage.removeItem('accessToken');
     setIsAuthenticated(false);
     setUsername("");
     setPassword("");
@@ -880,108 +884,20 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
   }
 
   return (
-    <div className="bg-background">
-      <div className="flex flex-col lg:flex-row min-h-screen">
-
-        {/* Sidebar */}
-        <div className={`w-full lg:w-80 bg-muted/50 border-r p-3 lg:p-6 overflow-y-auto ${
-          mobileView === 'requests' ? 'block lg:block' : 'hidden lg:block'
-        }`}>
-          <div className="mb-4 lg:mb-6">
-            <h2 className="text-lg lg:text-xl font-bold mb-1 lg:mb-2">Requests</h2>
-            <p className="text-xs lg:text-sm text-muted-foreground hidden sm:block">Manage and assign meeting times</p>
-          </div>
-          
-          <div className="space-y-4">
-            {meetings.length === 0 ? (
-              <Card>
-                <CardContent className="text-center py-8">
-                  <Calendar className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">No meeting requests</p>
-                </CardContent>
-              </Card>
-            ) : (
-              meetings.map((meeting) => (
-                <Card 
-                  key={meeting.id} 
-                  className={`cursor-pointer transition-colors ${
-                    selectedMeeting?.id === meeting.id ? 'ring-2 ring-primary' : ''
-                  }`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedMeeting(meeting);
-                  }}
-                >
-                  <CardContent className="p-3 lg:p-4">
-                    <div className="flex items-center justify-between mb-1 lg:mb-2">
-                      <h3 className="text-sm lg:text-base font-medium truncate">{meeting.name}</h3>
-                      <Badge variant={meeting.status === 'scheduled' ? 'default' : meeting.status === 'completed' ? 'outline' : 'secondary'} 
-                             className={`text-xs ${meeting.status === 'scheduled' ? 'bg-green-500' : meeting.status === 'completed' ? 'bg-blue-500' : 'bg-orange-500'}`}>
-                        {meeting.status || 'pending'}
-                      </Badge>
-                    </div>
-                    <p className="text-xs lg:text-sm text-muted-foreground mb-1 lg:mb-2 truncate">{meeting.organization}</p>
-                    <div className="space-y-1">
-                      {/* Mobile: Only show essential info */}
-                      <div className="lg:hidden">
-                        {meeting.assigned_datetime ? (
-                          <p className="text-xs text-green-700 font-medium">
-                            {new Date(meeting.assigned_datetime).toLocaleDateString()}
-                          </p>
-                        ) : meeting.preferred_datetime ? (
-                          <p className="text-xs text-orange-600">
-                            Prefers: {new Date(meeting.preferred_datetime).toLocaleDateString()}
-                          </p>
-                        ) : (
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(meeting.created_at).toLocaleDateString()}
-                          </p>
-                        )}
-                      </div>
-                      
-                      {/* Desktop: Full details */}
-                      <div className="hidden lg:block space-y-1">
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          Requested: {new Date(meeting.created_at).toLocaleDateString()}
-                        </p>
-                        {meeting.preferred_datetime && (
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            Preferred: {formatDateTime(meeting.preferred_datetime)}
-                          </p>
-                        )}
-                        {meeting.email && (
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Mail className="w-3 h-3" />
-                            {meeting.email}
-                          </p>
-                        )}
-                        {meeting.phone && (
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Phone className="w-3 h-3" />
-                            {meeting.phone}
-                          </p>
-                        )}
-                        {meeting.assigned_datetime && (
-                          <p className="text-xs text-green-700 flex items-center gap-1 font-medium">
-                            <CalendarDays className="w-3 h-3" />
-                            Scheduled: {formatDateTime(meeting.assigned_datetime)}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
-        </div>
-
+    <SidebarProvider>
+      <AppSidebar 
+        meetings={meetings}
+        selectedMeeting={selectedMeeting}
+        onMeetingSelect={(meeting) => {
+          setSelectedMeeting(meeting);
+          setShowMeetingDialog(true);
+        }}
+        onCreateMeeting={() => openCreateMeetingDialog(new Date())}
+        onLogout={handleLogout}
+      />
+      <SidebarInset>
         {/* Main Content */}
-        <div className={`flex-1 p-3 lg:p-6 pb-24 lg:pb-6 ${
-          mobileView === 'calendar' ? 'block lg:block' : 'hidden lg:block'
-        }`} onClick={() => setSelectedMeeting(null)}>
+        <div className="flex-1 p-4 lg:p-6" onClick={() => setSelectedMeeting(null)}>
           <div className="mb-3 lg:mb-6">
             <h1 className="text-lg sm:text-xl lg:text-3xl font-bold mb-1 lg:mb-2">Dashboard</h1>
             <p className="text-xs sm:text-sm lg:text-base text-muted-foreground hidden sm:block">Assign meeting times and manage appointments</p>
@@ -1536,81 +1452,9 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
             </DialogContent>
           </Dialog>
 
-          {/* Mobile Bottom Menu */}
-          <div className="fixed bottom-0 left-0 right-0 lg:hidden bg-background/95 backdrop-blur border-t border-border z-40">
-            <div className="flex items-end justify-between py-3 px-6 relative">
-              {/* Today */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setCurrentDate(new Date());
-                  setMobileView('calendar');
-                }}
-                className="flex flex-col items-center gap-1 h-auto py-2 px-3"
-                title="Today"
-              >
-                <Clock className="w-5 h-5" />
-                <span className="text-xs">Today</span>
-              </Button>
-              
-              {/* Calendar */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setMobileView('calendar')}
-                className={`flex flex-col items-center gap-1 h-auto py-2 px-3 ${
-                  mobileView === 'calendar' ? 'text-primary bg-primary/10 rounded-lg' : ''
-                }`}
-                title="Calendar View"
-              >
-                <Calendar className="w-5 h-5" />
-                <span className="text-xs">Calendar</span>
-              </Button>
-              
-              {/* Plus (Center - Large Semicircular) */}
-              <div className="absolute left-1/2 transform -translate-x-1/2 -top-6">
-                <Button
-                  variant="default"
-                  size="lg"
-                  onClick={() => openCreateMeetingDialog(new Date())}
-                  className="w-16 h-16 rounded-full bg-gradient-to-t from-primary to-primary-glow hover:from-primary/90 hover:to-primary-glow/90 shadow-xl border-4 border-background flex items-center justify-center"
-                  title="Create Meeting"
-                >
-                  <Plus className="w-8 h-8 text-primary-foreground" />
-                </Button>
-              </div>
-              
-              {/* Requests */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setMobileView('requests')}
-                className={`flex flex-col items-center gap-1 h-auto py-2 px-3 ${
-                  mobileView === 'requests' ? 'text-primary bg-primary/10 rounded-lg' : ''
-                }`}
-                title="Meeting Requests"
-              >
-                <Users className="w-5 h-5" />
-                <span className="text-xs">Requests</span>
-              </Button>
-              
-              {/* Book Meeting */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => window.location.href = '/'}
-                className="flex flex-col items-center gap-1 h-auto py-2 px-3"
-                title="Book Meeting"
-              >
-                <MessageSquare className="w-5 h-5" />
-                <span className="text-xs">Book</span>
-              </Button>
-            </div>
-          </div>
         </div>
-      </div>
-    </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 };
 
