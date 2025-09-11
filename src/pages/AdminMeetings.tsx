@@ -58,12 +58,15 @@ const AdminMeetings = ({ onAuthChange }: AdminMeetingsProps) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Get token from localStorage or wherever it's stored
+    // Get token from localStorage and set authentication
     const token = localStorage.getItem('accessToken');
     if (token) {
       setAccessToken(token);
+      onAuthChange?.(true);
+    } else {
+      onAuthChange?.(false);
     }
-  }, []);
+  }, [onAuthChange]);
 
   useEffect(() => {
     if (accessToken) {
@@ -245,7 +248,8 @@ const AdminMeetings = ({ onAuthChange }: AdminMeetingsProps) => {
           setShowMeetingDialog(true);
         }}
         onCreateMeeting={() => {
-          // Handle create meeting
+          // Navigate to dashboard for meeting creation
+          window.location.href = '/admin';
         }}
         onLogout={handleLogout}
       />

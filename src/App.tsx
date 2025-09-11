@@ -8,6 +8,7 @@ import Navigation from "./components/Navigation";
 import Index from "./pages/Index";
 import Admin from "./pages/Admin";
 import AdminMeetings from "./pages/AdminMeetings";
+import AdminSettings from "./pages/AdminSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const AppContent = () => {
         <Route path="/" element={<Index />} />
         <Route path="/admin" element={<Admin onAuthChange={setIsAuthenticated} />} />
         <Route path="/admin/meetings" element={<AdminMeetings onAuthChange={setIsAuthenticated} />} />
+        <Route path="/admin/settings" element={<AdminSettings onAuthChange={setIsAuthenticated} />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>

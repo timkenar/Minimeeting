@@ -68,10 +68,20 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (isAuthenticated) {
+    // Check if already authenticated
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      setAccessToken(token);
+      setIsAuthenticated(true);
+      onAuthChange?.(true);
+    }
+  }, [onAuthChange]);
+
+  useEffect(() => {
+    if (isAuthenticated && accessToken) {
       loadMeetings();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, accessToken]);
 
   const loadMeetings = async () => {
     try {
