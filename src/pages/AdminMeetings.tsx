@@ -22,6 +22,7 @@ import {
   CalendarDays
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { API_CONFIG, createAuthHeaders } from "@/config/api";
 
 interface Meeting {
   id: number;
@@ -78,11 +79,8 @@ const AdminMeetings = ({ onAuthChange }: AdminMeetingsProps) => {
     if (!accessToken) return;
     
     try {
-      const response = await fetch('http://localhost:8000/meetings/list/', {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
+      const response = await fetch(API_CONFIG.ENDPOINTS.MEETINGS_LIST, {
+        headers: createAuthHeaders(accessToken),
       });
       
       if (response.ok) {
@@ -106,12 +104,9 @@ const AdminMeetings = ({ onAuthChange }: AdminMeetingsProps) => {
 
   const handleLogout = async () => {
     try {
-      await fetch('http://localhost:8000/meetings/admin/logout/', {
+      await fetch(API_CONFIG.ENDPOINTS.ADMIN_LOGOUT, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
+        headers: createAuthHeaders(accessToken!),
       });
     } catch (error) {
       // Ignore logout errors
@@ -131,11 +126,9 @@ const AdminMeetings = ({ onAuthChange }: AdminMeetingsProps) => {
 
   const deleteMeeting = async (meetingId: number) => {
     try {
-      const response = await fetch(`http://localhost:8000/meetings/${meetingId}/`, {
+      const response = await fetch(API_CONFIG.ENDPOINTS.MEETINGS_DELETE(meetingId), {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
+        headers: createAuthHeaders(accessToken!),
       });
 
       if (response.ok) {
@@ -160,12 +153,9 @@ const AdminMeetings = ({ onAuthChange }: AdminMeetingsProps) => {
 
   const saveNotes = async (id: number) => {
     try {
-      const response = await fetch(`http://localhost:8000/meetings/${id}/`, {
+      const response = await fetch(API_CONFIG.ENDPOINTS.MEETINGS_UPDATE(id), {
         method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
+        headers: createAuthHeaders(accessToken!),
         body: JSON.stringify({
           comment: tempNotes
         }),
@@ -193,12 +183,9 @@ const AdminMeetings = ({ onAuthChange }: AdminMeetingsProps) => {
 
   const saveSignature = async (id: number) => {
     try {
-      const response = await fetch(`http://localhost:8000/meetings/${id}/`, {
+      const response = await fetch(API_CONFIG.ENDPOINTS.MEETINGS_UPDATE(id), {
         method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
+        headers: createAuthHeaders(accessToken!),
         body: JSON.stringify({
           signature: tempSignature
         }),

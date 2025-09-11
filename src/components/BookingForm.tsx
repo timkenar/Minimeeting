@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { User, Building2, Mail, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { API_CONFIG, createBasicHeaders } from "@/config/api";
 
 interface Meeting {
   id: string;
@@ -29,11 +30,9 @@ const BookingForm = () => {
     e.preventDefault();
     
     try {
-      const response = await fetch('http://localhost:8000/meetings/', {
+      const response = await fetch(API_CONFIG.ENDPOINTS.MEETINGS_SUBMIT, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: createBasicHeaders(),
         body: JSON.stringify({
           name: formData.name,
           organization: formData.organization,
@@ -65,7 +64,7 @@ const BookingForm = () => {
                 Add to Google Calendar
               </a>
               <a 
-                href={`http://localhost:8000${result.ics_download_url}`} 
+                href={`${API_CONFIG.BASE_URL}${result.ics_download_url}`} 
                 className="text-primary hover:underline text-sm"
               >
                 Download ICS

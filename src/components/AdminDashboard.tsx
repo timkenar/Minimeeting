@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import CalendarView from "./CalendarView";
 import { AppSidebar } from "./AppSidebar";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { API_CONFIG, createAuthHeaders, createBasicHeaders } from "@/config/api";
 
 interface Meeting {
   id: number;
@@ -85,11 +86,8 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
 
   const loadMeetings = async () => {
     try {
-      const response = await fetch('http://localhost:8000/meetings/list/', {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
+      const response = await fetch(API_CONFIG.ENDPOINTS.MEETINGS_LIST, {
+        headers: createAuthHeaders(accessToken!),
       });
       
       if (response.ok) {
@@ -115,11 +113,9 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
     e.preventDefault();
     
     try {
-      const response = await fetch('http://localhost:8000/meetings/admin/login/', {
+      const response = await fetch(API_CONFIG.ENDPOINTS.ADMIN_LOGIN, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: createBasicHeaders(),
         body: JSON.stringify({
           username,
           password
@@ -154,12 +150,9 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
 
   const saveNotes = async (id: number) => {
     try {
-      const response = await fetch(`http://localhost:8000/meetings/${id}/`, {
+      const response = await fetch(API_CONFIG.ENDPOINTS.MEETINGS_UPDATE(id), {
         method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
+        headers: createAuthHeaders(accessToken!),
         body: JSON.stringify({
           comment: tempNotes
         }),
@@ -187,12 +180,9 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
 
   const saveSignature = async (id: number) => {
     try {
-      const response = await fetch(`http://localhost:8000/meetings/${id}/`, {
+      const response = await fetch(API_CONFIG.ENDPOINTS.MEETINGS_UPDATE(id), {
         method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
+        headers: createAuthHeaders(accessToken!),
         body: JSON.stringify({
           signature: tempSignature
         }),
@@ -253,12 +243,9 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
     try {
       const combinedDateTime = new Date(`${tempDateTime.date}T${tempDateTime.time}`);
       
-      const response = await fetch(`http://localhost:8000/meetings/${meetingId}/`, {
+      const response = await fetch(API_CONFIG.ENDPOINTS.MEETINGS_UPDATE(meetingId), {
         method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
+        headers: createAuthHeaders(accessToken!),
         body: JSON.stringify({
           assigned_datetime: combinedDateTime.toISOString(),
           status: 'scheduled'
@@ -304,12 +291,9 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
 
   const saveDetailsEdit = async (meetingId: number) => {
     try {
-      const response = await fetch(`http://localhost:8000/meetings/${meetingId}/`, {
+      const response = await fetch(API_CONFIG.ENDPOINTS.MEETINGS_UPDATE(meetingId), {
         method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
+        headers: createAuthHeaders(accessToken!),
         body: JSON.stringify(tempDetails),
       });
 
@@ -334,12 +318,9 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
 
   const assignMeetingTime = async (meetingId: number, dateTime: string) => {
     try {
-      const response = await fetch(`http://localhost:8000/meetings/${meetingId}/`, {
+      const response = await fetch(API_CONFIG.ENDPOINTS.MEETINGS_UPDATE(meetingId), {
         method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
+        headers: createAuthHeaders(accessToken!),
         body: JSON.stringify({
           assigned_datetime: dateTime,
           status: 'scheduled'
@@ -374,12 +355,9 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
 
   const handleLogout = async () => {
     try {
-      await fetch('http://localhost:8000/meetings/admin/logout/', {
+      await fetch(API_CONFIG.ENDPOINTS.ADMIN_LOGOUT, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
+        headers: createAuthHeaders(accessToken!),
       });
     } catch (error) {
       // Ignore logout errors
@@ -402,11 +380,9 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
 
   const deleteMeeting = async (meetingId: number) => {
     try {
-      const response = await fetch(`http://localhost:8000/meetings/${meetingId}/`, {
+      const response = await fetch(API_CONFIG.ENDPOINTS.MEETINGS_DELETE(meetingId), {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
+        headers: createAuthHeaders(accessToken!),
       });
 
       if (response.ok) {
@@ -430,12 +406,9 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
 
   const rescheduleMeeting = async (meetingId: number, newDateTime: string) => {
     try {
-      const response = await fetch(`http://localhost:8000/meetings/${meetingId}/`, {
+      const response = await fetch(API_CONFIG.ENDPOINTS.MEETINGS_UPDATE(meetingId), {
         method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
+        headers: createAuthHeaders(accessToken!),
         body: JSON.stringify({
           assigned_datetime: newDateTime,
           status: 'scheduled'
@@ -478,12 +451,9 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
     e.preventDefault();
     
     try {
-      const response = await fetch('http://localhost:8000/meetings/admin/create/', {
+      const response = await fetch(API_CONFIG.ENDPOINTS.MEETINGS_CREATE, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
+        headers: createAuthHeaders(accessToken!),
         body: JSON.stringify(createMeetingForm),
       });
 
