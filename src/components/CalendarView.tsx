@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Calendar, Clock, User, Building2, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, Clock, User, Building2, Plus, CalendarPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Meeting {
@@ -26,9 +26,10 @@ interface CalendarViewProps {
   selectedMeeting?: Meeting | null;
   onCreateMeeting?: (date: Date) => void;
   onDaySelect?: (date: Date, meetings: Meeting[]) => void;
+  onAssignMeeting?: (meetingId: number, dateTime: string) => void;
 }
 
-const CalendarView = ({ meetings, onMeetingSelect, selectedMeeting, onCreateMeeting, onDaySelect }: CalendarViewProps) => {
+const CalendarView = ({ meetings, onMeetingSelect, selectedMeeting, onCreateMeeting, onDaySelect, onAssignMeeting }: CalendarViewProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [viewMode, setViewMode] = useState<'month' | 'day'>('month');
@@ -40,7 +41,7 @@ const CalendarView = ({ meetings, onMeetingSelect, selectedMeeting, onCreateMeet
   
   const dayNames = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
   
-  const { calendarDays, todaysMeetings, upcomingMeetings } = useMemo(() => {
+  const { calendarDays, todaysMeetings, upcomingMeetings, pendingMeetings } = useMemo(() => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     
@@ -85,43 +86,48 @@ const CalendarView = ({ meetings, onMeetingSelect, selectedMeeting, onCreateMeet
       });
     }
     
-    // Get today's and upcoming meetings
+    // Get today's meetings, upcoming meetings, and pending meetings
     const today = new Date();
     const todayStr = today.toDateString();
     
+    // Only show scheduled meetings in today's meetings (those with assigned_datetime)
     const todaysMeetings = meetings.filter(meeting => {
-      const meetingDate = meeting.assigned_datetime ? 
-        new Date(meeting.assigned_datetime) : 
-        new Date(meeting.created_at);
+      if (!meeting.assigned_datetime) return false;
+      const meetingDate = new Date(meeting.assigned_datetime);
       return meetingDate.toDateString() === todayStr;
     });
     
+    // Only show scheduled meetings in upcoming (those with assigned_datetime)
     const upcomingMeetings = meetings
       .filter(meeting => {
-        const meetingDate = meeting.assigned_datetime ? 
-          new Date(meeting.assigned_datetime) : 
-          new Date(meeting.created_at);
+        if (!meeting.assigned_datetime) return false;
+        const meetingDate = new Date(meeting.assigned_datetime);
         return meetingDate > today;
       })
       .sort((a, b) => {
-        const aDate = a.assigned_datetime ? 
-          new Date(a.assigned_datetime) : 
-          new Date(a.created_at);
-        const bDate = b.assigned_datetime ? 
-          new Date(b.assigned_datetime) : 
-          new Date(b.created_at);
+        const aDate = new Date(a.assigned_datetime!);
+        const bDate = new Date(b.assigned_datetime!);
         return aDate.getTime() - bDate.getTime();
       })
       .slice(0, 5);
     
-    return { calendarDays: days, todaysMeetings, upcomingMeetings };
+    // Get pending meetings (those without assigned_datetime)
+    const pendingMeetings = meetings
+      .filter(meeting => !meeting.assigned_datetime || meeting.status === 'pending')
+      .sort((a, b) => {
+        const aDate = new Date(a.created_at);
+        const bDate = new Date(b.created_at);
+        return aDate.getTime() - bDate.getTime();
+      });
+    
+    return { calendarDays: days, todaysMeetings, upcomingMeetings, pendingMeetings };
   }, [currentDate, meetings]);
   
   const getMeetingsForDate = (date: Date) => {
+    // Only show meetings with assigned datetime in the calendar grid
     return meetings.filter(meeting => {
-      const meetingDate = meeting.assigned_datetime ? 
-        new Date(meeting.assigned_datetime) : 
-        new Date(meeting.created_at);
+      if (!meeting.assigned_datetime) return false;
+      const meetingDate = new Date(meeting.assigned_datetime);
       return meetingDate.toDateString() === date.toDateString();
     });
   };
@@ -327,6 +333,98 @@ const CalendarView = ({ meetings, onMeetingSelect, selectedMeeting, onCreateMeet
             )}
           </CardContent>
         </Card>
+        
+        {/* Pending Meetings */}
+        <Card className="calendar-card">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-calendar-header flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              Pending Assignments
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {pendingMeetings.length === 0 ? (
+              <p className="text-calendar-muted text-sm py-4">No pending meetings</p>
+            ) : (
+              <div className="space-y-2">
+                {pendingMeetings.slice(0, 5).map(meeting => (
+                  <div
+                    key={meeting.id}
+                    className={cn(
+                      "p-3 rounded-lg calendar-event-card border-l-4 border-orange-400",
+                      "bg-orange-50",
+                      selectedMeeting?.id === meeting.id ? "ring-2 ring-primary bg-orange-100" : "hover:bg-orange-100"
+                    )}
+                  >
+                    <div className="flex items-start gap-2">
+                      <div className="w-2 h-2 rounded-full flex-shrink-0 mt-2 bg-orange-400" />
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-sm text-calendar-day truncate">{meeting.name}</div>
+                        <div className="text-xs text-calendar-muted truncate">{meeting.organization}</div>
+                        {meeting.preferred_datetime && (
+                          <div className="text-xs text-orange-600 mt-1">
+                            Prefers: {new Date(meeting.preferred_datetime).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric',
+                              hour: 'numeric', 
+                              minute: '2-digit',
+                              hour12: true 
+                            })}
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between mt-2">
+                          <div className="text-xs text-calendar-muted">
+                            {selectedMeeting?.id === meeting.id ? 
+                              "Click on a calendar day to assign" : 
+                              "Ready to schedule"
+                            }
+                          </div>
+                          <Button
+                            size="sm"
+                            variant={selectedMeeting?.id === meeting.id ? "default" : "outline"}
+                            className={cn(
+                              "h-6 px-2 text-xs",
+                              selectedMeeting?.id === meeting.id 
+                                ? "bg-blue-600 hover:bg-blue-700 text-white" 
+                                : "border-orange-300 text-orange-700 hover:bg-orange-200"
+                            )}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (selectedMeeting?.id === meeting.id) {
+                                // Already selected, clear selection
+                                onMeetingSelect?.(null as any);
+                              } else {
+                                // Select this meeting for assignment
+                                onMeetingSelect?.(meeting);
+                              }
+                            }}
+                          >
+                            {selectedMeeting?.id === meeting.id ? (
+                              <>
+                                <Calendar className="w-3 h-3 mr-1" />
+                                Cancel
+                              </>
+                            ) : (
+                              <>
+                                <CalendarPlus className="w-3 h-3 mr-1" />
+                                Schedule
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {pendingMeetings.length > 5 && (
+                  <div className="text-xs text-calendar-muted px-3 py-2">
+                    +{pendingMeetings.length - 5} more pending
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
       
       {/* Main Calendar */}
@@ -388,6 +486,49 @@ const CalendarView = ({ meetings, onMeetingSelect, selectedMeeting, onCreateMeet
             </div>
           </CardHeader>
           <CardContent className="pt-0">
+            {/* Assignment Mode Indicator */}
+            {selectedMeeting && !selectedMeeting.assigned_datetime && (
+              <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-300 rounded-lg shadow-sm">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 text-blue-900 mb-2">
+                      <CalendarPlus className="w-5 h-5" />
+                      <span className="font-semibold text-base">
+                        Scheduling: {selectedMeeting.name}
+                      </span>
+                    </div>
+                    <div className="text-sm text-blue-800 mb-1">
+                      <strong>Organization:</strong> {selectedMeeting.organization}
+                    </div>
+                    {selectedMeeting.preferred_datetime && (
+                      <div className="text-sm text-blue-800 mb-1">
+                        <strong>Preferred Time:</strong> {new Date(selectedMeeting.preferred_datetime).toLocaleDateString('en-US', { 
+                          weekday: 'short',
+                          month: 'short', 
+                          day: 'numeric',
+                          hour: 'numeric', 
+                          minute: '2-digit',
+                          hour12: true 
+                        })}
+                      </div>
+                    )}
+                    <div className="text-xs text-blue-600 mt-2 bg-white/50 p-2 rounded border-l-4 border-blue-400">
+                      💡 <strong>Next:</strong> Click on any available day below to assign this meeting (default time: 10:00 AM)
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onMeetingSelect?.(null as any)}
+                    className="text-blue-600 hover:bg-blue-200 ml-2"
+                    title="Cancel scheduling mode"
+                  >
+                    ✕
+                  </Button>
+                </div>
+              </div>
+            )}
+            
             {viewMode === 'month' ? (
               <>
                 {/* Day Headers */}
@@ -463,8 +604,28 @@ const CalendarView = ({ meetings, onMeetingSelect, selectedMeeting, onCreateMeet
                         </div>
                       )}
                       
-                      {/* Add Meeting Button for available slots */}
-                      {dayMeetings.length < 3 && day.isCurrentMonth && onCreateMeeting && (
+                      {/* Assign Meeting Button for selected pending meeting */}
+                      {selectedMeeting && !selectedMeeting.assigned_datetime && day.isCurrentMonth && onAssignMeeting && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="w-full h-7 text-xs p-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold border-2 border-blue-300 shadow-sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Default to 10:00 AM for the assignment
+                            const assignDateTime = new Date(day.date);
+                            assignDateTime.setHours(10, 0, 0, 0);
+                            onAssignMeeting(selectedMeeting.id, assignDateTime.toISOString());
+                          }}
+                          title={`Assign ${selectedMeeting.name} to ${day.date.toLocaleDateString()}`}
+                        >
+                          <CalendarPlus className="w-3 h-3 mr-1" />
+                          Assign Here
+                        </Button>
+                      )}
+                      
+                      {/* Add Meeting Button for available slots (only show when no pending meeting selected) */}
+                      {(!selectedMeeting || selectedMeeting.assigned_datetime) && dayMeetings.length < 3 && day.isCurrentMonth && onCreateMeeting && (
                         <Button
                           variant="ghost"
                           size="sm"

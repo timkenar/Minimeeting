@@ -75,6 +75,16 @@ const AdminMeetings = ({ onAuthChange }: AdminMeetingsProps) => {
     }
   }, [accessToken]);
 
+  // Reset editing states when dialog closes or meeting changes
+  useEffect(() => {
+    if (!showMeetingDialog || !selectedMeeting) {
+      setEditingDetails(false);
+      setEditingDateTime(false);
+      setEditingNotes(null);
+      setEditingSignature(null);
+    }
+  }, [showMeetingDialog, selectedMeeting?.id]);
+
   const loadMeetings = async () => {
     if (!accessToken) return;
     

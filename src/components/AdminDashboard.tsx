@@ -84,6 +84,16 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
     }
   }, [isAuthenticated, accessToken]);
 
+  // Reset editing states when dialog closes or meeting changes
+  useEffect(() => {
+    if (!showMeetingDialog || !selectedMeeting) {
+      setEditingDetails(false);
+      setEditingDateTime(false);
+      setEditingNotes(null);
+      setEditingSignature(null);
+    }
+  }, [showMeetingDialog, selectedMeeting?.id]);
+
   const loadMeetings = async () => {
     try {
       const response = await fetch(API_CONFIG.ENDPOINTS.MEETINGS_LIST, {
@@ -170,6 +180,7 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
         throw new Error('Failed to save notes');
       }
     } catch (error) {
+      setEditingNotes(null); // Reset editing state on error
       toast({
         title: "Error",
         description: "Failed to save notes",
@@ -200,6 +211,7 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
         throw new Error('Failed to save signature');
       }
     } catch (error) {
+      setEditingSignature(null); // Reset editing state on error
       toast({
         title: "Error",
         description: "Failed to save signature",
@@ -270,6 +282,7 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
         throw new Error('Failed to reschedule meeting');
       }
     } catch (error) {
+      setEditingDateTime(false); // Reset editing state on error
       toast({
         title: "Error",
         description: "Failed to reschedule meeting",
@@ -300,6 +313,13 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
       if (response.ok) {
         await loadMeetings();
         setEditingDetails(false);
+        // Update selected meeting with new details
+        if (selectedMeeting) {
+          setSelectedMeeting({
+            ...selectedMeeting,
+            ...tempDetails
+          });
+        }
         toast({
           title: "Details updated",
           description: "Meeting details have been updated successfully."
@@ -308,6 +328,7 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
         throw new Error('Failed to update details');
       }
     } catch (error) {
+      setEditingDetails(false); // Reset editing state on error
       toast({
         title: "Error",
         description: "Failed to update meeting details",
@@ -329,7 +350,7 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
 
       if (response.ok) {
         await loadMeetings();
-        setSelectedMeeting(null);
+        setSelectedMeeting(null); // Clear selection after successful assignment
         toast({
           title: "Meeting scheduled",
           description: "Meeting time has been assigned successfully."
@@ -953,6 +974,7 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
                 }}
                 selectedMeeting={selectedMeeting}
                 onCreateMeeting={openCreateMeetingDialog}
+                onAssignMeeting={assignMeetingTime}
                 onDaySelect={(date, dayMeetings) => {
                   setSelectedMeeting(null); // Clear meeting selection when day is selected
                 }}
