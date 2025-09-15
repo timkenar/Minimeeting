@@ -126,7 +126,7 @@ export function AppSidebar({ meetings, selectedMeeting, onMeetingSelect, onCreat
 
       <SidebarContent>
         {/* Notifications Section */}
-        {hasNewNotifications && newMeetings.length > 0 && (
+        {/* {hasNewNotifications && newMeetings.length > 0 && (
           <SidebarGroup className="border-b border-orange-200 bg-orange-50/50">
             <SidebarGroupContent>
               <div className="p-3">
@@ -169,7 +169,7 @@ export function AppSidebar({ meetings, selectedMeeting, onMeetingSelect, onCreat
               </div>
             </SidebarGroupContent>
           </SidebarGroup>
-        )}
+        )} */}
 
         <SidebarGroup>
           <SidebarGroupContent>
@@ -179,11 +179,6 @@ export function AppSidebar({ meetings, selectedMeeting, onMeetingSelect, onCreat
                   <Link to="/admin" onClick={dismissNotifications}>
                     <Home className="w-4 h-4" />
                     <span>Dashboard</span>
-                    {hasNewNotifications && newMeetings.length > 0 && (
-                      <Badge variant="destructive" className="ml-auto h-5 w-5 text-xs p-0 flex items-center justify-center bg-orange-500 hover:bg-orange-600 animate-pulse">
-                        {newMeetings.length}
-                      </Badge>
-                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -192,9 +187,17 @@ export function AppSidebar({ meetings, selectedMeeting, onMeetingSelect, onCreat
                   <Link to="/admin/meetings" onClick={dismissNotifications}>
                     <Users className="w-4 h-4" />
                     <span>Meetings</span>
-                    {hasNewNotifications && newMeetings.length > 0 && (
-                      <Badge variant="destructive" className="ml-auto h-5 w-5 text-xs p-0 flex items-center justify-center bg-orange-500 hover:bg-orange-600 animate-pulse">
-                        {newMeetings.length}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={location.pathname === "/admin/notifications"}>
+                  <Link to="/admin/notifications" onClick={dismissNotifications}>
+                    <Bell className="w-4 h-4" />
+                    <span>Notifications</span>
+                    {pendingMeetings.length > 0 && (
+                      <Badge className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
+                        {pendingMeetings.length}
                       </Badge>
                     )}
                   </Link>

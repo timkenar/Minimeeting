@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import Admin from "./pages/Admin";
 import AdminMeetings from "./pages/AdminMeetings";
 import AdminSettings from "./pages/AdminSettings";
+import AdminNotifications from "./pages/AdminNotifications";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -54,6 +55,15 @@ const AppContent = () => {
             path="/admin/meetings" 
             element={
               <AdminMeetings 
+                onAuthChange={setIsAuthenticated}
+                onCreateMeetingChange={handleCreateMeetingChange}
+              />
+            } 
+          />
+          <Route 
+            path="/admin/notifications" 
+            element={
+              <AdminNotifications 
                 onAuthChange={setIsAuthenticated}
                 onCreateMeetingChange={handleCreateMeetingChange}
               />
