@@ -13,9 +13,10 @@ import { Moon, Sun, Palette } from "lucide-react";
 
 interface AdminSettingsProps {
   onAuthChange?: (isAuth: boolean) => void;
+  onCreateMeetingChange?: (callback: (() => void) | null) => void;
 }
 
-export default function AdminSettings({ onAuthChange }: AdminSettingsProps) {
+export default function AdminSettings({ onAuthChange, onCreateMeetingChange }: AdminSettingsProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
@@ -29,6 +30,17 @@ export default function AdminSettings({ onAuthChange }: AdminSettingsProps) {
       navigate('/admin');
     }
   }, [navigate, onAuthChange]);
+
+  useEffect(() => {
+    if (isAuthenticated && onCreateMeetingChange) {
+      const createMeetingHandler = () => navigate('/admin');
+      onCreateMeetingChange(createMeetingHandler);
+      
+      return () => {
+        onCreateMeetingChange(null);
+      };
+    }
+  }, [isAuthenticated, onCreateMeetingChange, navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem('accessToken');

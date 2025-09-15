@@ -41,9 +41,10 @@ interface Meeting {
 
 interface AdminMeetingsProps {
   onAuthChange?: (isAuthenticated: boolean) => void;
+  onCreateMeetingChange?: (callback: (() => void) | null) => void;
 }
 
-const AdminMeetings = ({ onAuthChange }: AdminMeetingsProps) => {
+const AdminMeetings = ({ onAuthChange, onCreateMeetingChange }: AdminMeetingsProps) => {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
   const [showMeetingDialog, setShowMeetingDialog] = useState(false);
@@ -74,6 +75,19 @@ const AdminMeetings = ({ onAuthChange }: AdminMeetingsProps) => {
       loadMeetings();
     }
   }, [accessToken]);
+
+  useEffect(() => {
+    if (accessToken && onCreateMeetingChange) {
+      const createMeetingHandler = () => {
+        window.location.href = '/admin';
+      };
+      onCreateMeetingChange(createMeetingHandler);
+      
+      return () => {
+        onCreateMeetingChange(null);
+      };
+    }
+  }, [accessToken, onCreateMeetingChange]);
 
   // Reset editing states when dialog closes or meeting changes
   useEffect(() => {

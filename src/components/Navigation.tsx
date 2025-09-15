@@ -118,8 +118,8 @@ const Navigation = ({ onLogout, isAuthenticated }: NavigationProps) => {
             )}
           </div>
 
-          {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center gap-2">
+          {/* Mobile Menu Button - Hidden when in admin pages since we use bottom nav */}
+          <div className="md:hidden flex items-center gap-2" style={{ display: location.pathname.startsWith('/admin') ? 'none' : 'flex' }}>
             <Button
               variant="ghost"
               size="sm"
@@ -148,8 +148,8 @@ const Navigation = ({ onLogout, isAuthenticated }: NavigationProps) => {
           </div>
         </div>
 
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
+        {/* Mobile Menu - Hidden when in admin pages since we use bottom nav */}
+        {mobileMenuOpen && !location.pathname.startsWith('/admin') && (
           <div className="md:hidden py-4 border-t border-gray-200 dark:border-gray-700">
             <div className="flex flex-col gap-4">
               {isAuthenticated && (

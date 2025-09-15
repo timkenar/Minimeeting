@@ -22,7 +22,9 @@ import {
   UserCheck,
   Users as UsersIcon,
   MapPin,
-  Star
+  Star,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,6 +54,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Meeting {
   id: number;
@@ -79,6 +82,11 @@ export function MeetingsTable({ meetings, onMeetingSelect, onEditMeeting, onDele
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("date");
+  const [currentPage, setCurrentPage] = useState(1);
+  const isMobile = useIsMobile();
+  
+  // Mobile pagination settings
+  const itemsPerPage = isMobile ? 5 : 10;
 
   // Filter and sort meetings
   const filteredMeetings = meetings
@@ -107,6 +115,17 @@ export function MeetingsTable({ meetings, onMeetingSelect, onEditMeeting, onDele
           return new Date(dateB).getTime() - new Date(dateA).getTime();
       }
     });
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredMeetings.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedMeetings = filteredMeetings.slice(startIndex, endIndex);
+
+  // Reset page when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterStatus, sortBy]);
 
   const getStatusIcon = (status?: string) => {
     switch (status) {
@@ -165,6 +184,122 @@ export function MeetingsTable({ meetings, onMeetingSelect, onEditMeeting, onDele
   };
 
   const stats = getStatusStats();
+
+  // Mobile Meeting Card Component
+  const MobileMeetingCard = ({ meeting }: { meeting: Meeting }) => (
+    <Card 
+      key={meeting.id}
+      className="p-4 cursor-pointer hover:shadow-md transition-shadow"
+      onClick={() => onMeetingSelect(meeting)}
+    >
+      <div className="space-y-3">
+        {/* Header with avatar and name */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <Avatar className="h-10 w-10">
+              <AvatarFallback className="bg-gradient-to-br from-blue-400 to-purple-500 text-white font-medium">
+                {getInitials(meeting.name)}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="font-medium text-sm">{meeting.name}</p>
+              <p className="text-xs text-muted-foreground">{meeting.organization}</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-1">
+            {getStatusIcon(meeting.status)}
+            <Badge 
+              variant="outline" 
+              className={`text-xs ${getStatusColor(meeting.status)}`}
+            >
+              {meeting.status || 'pending'}
+            </Badge>
+          </div>
+        </div>
+
+        {/* Meeting details */}
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground line-clamp-2">
+            {meeting.reason}
+          </p>
+          
+          {/* Contact info */}
+          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+            {meeting.email && (
+              <div className="flex items-center space-x-1">
+                <Mail className="w-3 h-3" />
+                <span className="truncate max-w-[120px]">{meeting.email}</span>
+              </div>
+            )}
+            {meeting.phone && (
+              <div className="flex items-center space-x-1">
+                <Phone className="w-3 h-3" />
+                <span>{meeting.phone}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Time info */}
+          <div className="text-xs">
+            {meeting.assigned_datetime ? (
+              <div className="flex items-center space-x-1 text-green-700">
+                <CalendarDays className="w-3 h-3" />
+                <span>{formatDateTime(meeting.assigned_datetime)}</span>
+              </div>
+            ) : meeting.preferred_datetime ? (
+              <div className="flex items-center space-x-1 text-orange-700">
+                <Clock className="w-3 h-3" />
+                <span>Prefers: {formatDateTime(meeting.preferred_datetime)}</span>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-1 text-muted-foreground">
+                <AlertCircle className="w-3 h-3" />
+                <span>Not scheduled</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex justify-end">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={(e) => {
+                e.stopPropagation();
+                onMeetingSelect(meeting);
+              }}>
+                <Eye className="mr-2 h-4 w-4" />
+                View Details
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={(e) => {
+                e.stopPropagation();
+                onEditMeeting(meeting);
+              }}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Meeting
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                className="text-destructive"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteMeeting(meeting.id);
+                }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+    </Card>
+  );
 
   return (
     <div className="space-y-6">
@@ -271,157 +406,240 @@ export function MeetingsTable({ meetings, onMeetingSelect, onEditMeeting, onDele
         </div>
       </div>
 
-      {/* Meetings Table */}
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent border-b">
-                <TableHead className="w-[300px] font-semibold">Contact</TableHead>
-                <TableHead className="font-semibold">Organization</TableHead>
-                <TableHead className="font-semibold">Status</TableHead>
-                <TableHead className="font-semibold">Scheduled Time</TableHead>
-                <TableHead className="font-semibold">Meeting Purpose</TableHead>
-                <TableHead className="text-right font-semibold">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredMeetings.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
-                    <div className="flex flex-col items-center space-y-2">
-                      <UsersIcon className="w-8 h-8 text-muted-foreground" />
-                      <p className="text-muted-foreground">No meetings found</p>
-                    </div>
-                  </TableCell>
+      {/* Mobile vs Desktop View */}
+      {isMobile ? (
+        /* Mobile Card View */
+        <div className="space-y-4">
+          {paginatedMeetings.length === 0 ? (
+            <Card className="p-8">
+              <div className="flex flex-col items-center space-y-2">
+                <UsersIcon className="w-8 h-8 text-muted-foreground" />
+                <p className="text-muted-foreground text-center">No meetings found</p>
+              </div>
+            </Card>
+          ) : (
+            paginatedMeetings.map((meeting) => (
+              <MobileMeetingCard key={meeting.id} meeting={meeting} />
+            ))
+          )}
+          
+          {/* Mobile Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between py-4">
+              <div className="text-sm text-muted-foreground">
+                Page {currentPage} of {totalPages} ({filteredMeetings.length} meetings)
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="text-sm font-medium min-w-[2rem] text-center">
+                  {currentPage}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Desktop Table View */
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent border-b">
+                  <TableHead className="w-[300px] font-semibold">Contact</TableHead>
+                  <TableHead className="font-semibold">Organization</TableHead>
+                  <TableHead className="font-semibold">Status</TableHead>
+                  <TableHead className="font-semibold">Scheduled Time</TableHead>
+                  <TableHead className="font-semibold">Meeting Purpose</TableHead>
+                  <TableHead className="text-right font-semibold">Actions</TableHead>
                 </TableRow>
-              ) : (
-                filteredMeetings.map((meeting) => (
-                  <TableRow 
-                    key={meeting.id} 
-                    className="hover:bg-muted/50 cursor-pointer group"
-                    onClick={() => onMeetingSelect(meeting)}
-                  >
-                    <TableCell>
-                      <div className="flex items-center space-x-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarFallback className="bg-gradient-to-br from-blue-400 to-purple-500 text-white font-medium">
-                            {getInitials(meeting.name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="space-y-1">
-                          <p className="font-medium leading-none">{meeting.name}</p>
-                          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                            {meeting.email && (
-                              <div className="flex items-center space-x-1">
-                                <Mail className="w-3 h-3" />
-                                <span>{meeting.email}</span>
-                              </div>
-                            )}
-                            {meeting.phone && (
-                              <div className="flex items-center space-x-1">
-                                <Phone className="w-3 h-3" />
-                                <span>{meeting.phone}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
+              </TableHeader>
+              <TableBody>
+                {paginatedMeetings.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8">
+                      <div className="flex flex-col items-center space-y-2">
+                        <UsersIcon className="w-8 h-8 text-muted-foreground" />
+                        <p className="text-muted-foreground">No meetings found</p>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Building2 className="w-4 h-4 text-muted-foreground" />
-                        <span className="font-medium">{meeting.organization}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        {getStatusIcon(meeting.status)}
-                        <Badge 
-                          variant="outline" 
-                          className={`capitalize ${getStatusColor(meeting.status)}`}
-                        >
-                          {meeting.status || 'pending'}
-                        </Badge>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {meeting.assigned_datetime ? (
-                        <div className="flex items-center space-x-2 text-sm">
-                          <CalendarDays className="w-4 h-4 text-green-600" />
-                          <div>
-                            <p className="font-medium text-green-700">
-                              {formatDateTime(meeting.assigned_datetime)}
-                            </p>
-                          </div>
-                        </div>
-                      ) : meeting.preferred_datetime ? (
-                        <div className="flex items-center space-x-2 text-sm">
-                          <Clock className="w-4 h-4 text-orange-600" />
-                          <div>
-                            <p className="text-muted-foreground">Prefers:</p>
-                            <p className="font-medium text-orange-700">
-                              {formatDateTime(meeting.preferred_datetime)}
-                            </p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                          <AlertCircle className="w-4 h-4" />
-                          <span>Not scheduled</span>
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="max-w-xs">
-                        <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-                          {meeting.reason}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={(e) => {
-                            e.stopPropagation();
-                            onMeetingSelect(meeting);
-                          }}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={(e) => {
-                            e.stopPropagation();
-                            onEditMeeting(meeting);
-                          }}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit Meeting
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            className="text-destructive"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDeleteMeeting(meeting.id);
-                            }}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                ) : (
+                  paginatedMeetings.map((meeting) => (
+                    <TableRow 
+                      key={meeting.id} 
+                      className="hover:bg-muted/50 cursor-pointer group"
+                      onClick={() => onMeetingSelect(meeting)}
+                    >
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          <Avatar className="h-10 w-10">
+                            <AvatarFallback className="bg-gradient-to-br from-blue-400 to-purple-500 text-white font-medium">
+                              {getInitials(meeting.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="space-y-1">
+                            <p className="font-medium leading-none">{meeting.name}</p>
+                            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                              {meeting.email && (
+                                <div className="flex items-center space-x-1">
+                                  <Mail className="w-3 h-3" />
+                                  <span>{meeting.email}</span>
+                                </div>
+                              )}
+                              {meeting.phone && (
+                                <div className="flex items-center space-x-1">
+                                  <Phone className="w-3 h-3" />
+                                  <span>{meeting.phone}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Building2 className="w-4 h-4 text-muted-foreground" />
+                          <span className="font-medium">{meeting.organization}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          {getStatusIcon(meeting.status)}
+                          <Badge 
+                            variant="outline" 
+                            className={`capitalize ${getStatusColor(meeting.status)}`}
+                          >
+                            {meeting.status || 'pending'}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {meeting.assigned_datetime ? (
+                          <div className="flex items-center space-x-2 text-sm">
+                            <CalendarDays className="w-4 h-4 text-green-600" />
+                            <div>
+                              <p className="font-medium text-green-700">
+                                {formatDateTime(meeting.assigned_datetime)}
+                              </p>
+                            </div>
+                          </div>
+                        ) : meeting.preferred_datetime ? (
+                          <div className="flex items-center space-x-2 text-sm">
+                            <Clock className="w-4 h-4 text-orange-600" />
+                            <div>
+                              <p className="text-muted-foreground">Prefers:</p>
+                              <p className="font-medium text-orange-700">
+                                {formatDateTime(meeting.preferred_datetime)}
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                            <AlertCircle className="w-4 h-4" />
+                            <span>Not scheduled</span>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="max-w-xs">
+                          <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+                            {meeting.reason}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={(e) => {
+                              e.stopPropagation();
+                              onMeetingSelect(meeting);
+                            }}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => {
+                              e.stopPropagation();
+                              onEditMeeting(meeting);
+                            }}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit Meeting
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteMeeting(meeting.id);
+                              }}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+            
+            {/* Desktop Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between p-4 border-t">
+                <div className="text-sm text-muted-foreground">
+                  Showing {startIndex + 1} to {Math.min(endIndex, filteredMeetings.length)} of {filteredMeetings.length} meetings
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-2" />
+                    Previous
+                  </Button>
+                  <div className="text-sm font-medium">
+                    Page {currentPage} of {totalPages}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

@@ -171,4 +171,58 @@ All colors MUST be HSL.
   .calendar-event-item {
     @apply hover:scale-105 transition-transform duration-200;
   }
+
+  /* Mobile Bottom Navigation */
+  .bottom-nav-safe-area {
+    height: env(safe-area-inset-bottom);
+    min-height: 8px;
+  }
+  
+  /* Mobile-optimized animations */
+  .mobile-scale-animation {
+    @apply active:scale-95 transition-transform duration-150 ease-out;
+  }
+  
+  .mobile-tap-highlight {
+    -webkit-tap-highlight-color: transparent;
+    @apply select-none;
+  }
+  
+  /* Enhanced mobile touch experience */
+  .mobile-button {
+    @apply mobile-scale-animation mobile-tap-highlight;
+    min-height: 44px; /* iOS minimum touch target size */
+    min-width: 44px;
+  }
+}
+
+@layer utilities {
+  /* Safe area utilities for mobile devices with notches */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .safe-left {
+    padding-left: env(safe-area-inset-left);
+  }
+  
+  .safe-right {
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  .h-safe-area-inset-bottom {
+    height: env(safe-area-inset-bottom);
+  }
+  
+  /* Disable text selection on mobile for better UX */
+  .no-select {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
 }

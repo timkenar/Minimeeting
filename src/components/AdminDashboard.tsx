@@ -31,9 +31,10 @@ interface Meeting {
 
 interface AdminDashboardProps {
   onAuthChange?: (isAuthenticated: boolean) => void;
+  onCreateMeetingChange?: (callback: (() => void) | null) => void;
 }
 
-const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
+const AdminDashboard = ({ onAuthChange, onCreateMeetingChange }: AdminDashboardProps) => {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [editingSignature, setEditingSignature] = useState<string | null>(null);
@@ -83,6 +84,17 @@ const AdminDashboard = ({ onAuthChange }: AdminDashboardProps) => {
       loadMeetings();
     }
   }, [isAuthenticated, accessToken]);
+
+  useEffect(() => {
+    if (isAuthenticated && onCreateMeetingChange) {
+      const createMeetingHandler = () => openCreateMeetingDialog(new Date());
+      onCreateMeetingChange(createMeetingHandler);
+      
+      return () => {
+        onCreateMeetingChange(null);
+      };
+    }
+  }, [isAuthenticated, onCreateMeetingChange]);
 
   // Reset editing states when dialog closes or meeting changes
   useEffect(() => {
