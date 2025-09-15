@@ -54,8 +54,6 @@ const AdminMeetings = ({ onAuthChange, onCreateMeetingChange }: AdminMeetingsPro
   const [tempNotes, setTempNotes] = useState("");
   const [tempSignature, setTempSignature] = useState("");
   const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [editingDateTime, setEditingDateTime] = useState(false);
-  const [tempDateTime, setTempDateTime] = useState({ date: '', time: '' });
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [meetingToSchedule, setMeetingToSchedule] = useState<Meeting | null>(null);
   const [isReschedule, setIsReschedule] = useState(false);
@@ -97,7 +95,6 @@ const AdminMeetings = ({ onAuthChange, onCreateMeetingChange }: AdminMeetingsPro
   useEffect(() => {
     if (!showMeetingDialog || !selectedMeeting) {
       setEditingDetails(false);
-      setEditingDateTime(false);
       setEditingNotes(null);
       setEditingSignature(null);
     }

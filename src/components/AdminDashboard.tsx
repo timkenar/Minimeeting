@@ -6,13 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Calendar, Clock, User, Building2, MessageSquare, PenTool, LogIn, CalendarDays, ChevronLeft, ChevronRight, Edit, Trash2, Mail, Phone, Plus, Menu, X, Users, Home } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CalendarView from "./CalendarView";
 import { AppSidebar } from "./AppSidebar";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { API_CONFIG, createAuthHeaders, createBasicHeaders } from "@/config/api";
+import { Schedule } from "./Schedule";
 
 interface Meeting {
   id: number;
@@ -60,14 +61,16 @@ const AdminDashboard = ({ onAuthChange, onCreateMeetingChange }: AdminDashboardP
   const [showMeetingDialog, setShowMeetingDialog] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [createMeetingDateTime, setCreateMeetingDateTime] = useState<{date: string, time: string} | null>(null);
-  const [editingDateTime, setEditingDateTime] = useState(false);
-  const [tempDateTime, setTempDateTime] = useState({ date: '', time: '' });
   const [editingDetails, setEditingDetails] = useState(false);
   const [tempDetails, setTempDetails] = useState({ name: '', organization: '', reason: '', email: '', phone: '' });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [calendarExpanded, setCalendarExpanded] = useState(true);
   const [mobileView, setMobileView] = useState<'calendar' | 'requests'>('calendar');
   const { toast } = useToast();
+
+  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
+  const [meetingToSchedule, setMeetingToSchedule] = useState<Meeting | null>(null);
+  const [isReschedule, setIsReschedule] = useState(false);
 
   useEffect(() => {
     // Check if already authenticated
@@ -100,7 +103,6 @@ const AdminDashboard = ({ onAuthChange, onCreateMeetingChange }: AdminDashboardP
   useEffect(() => {
     if (!showMeetingDialog || !selectedMeeting) {
       setEditingDetails(false);
-      setEditingDateTime(false);
       setEditingNotes(null);
       setEditingSignature(null);
     }
@@ -244,63 +246,6 @@ const AdminDashboard = ({ onAuthChange, onCreateMeetingChange }: AdminDashboardP
   const startSignatureEdit = (meeting: Meeting) => {
     setEditingSignature(meeting.id.toString());
     setTempSignature(meeting.signature || "");
-  };
-
-  const startDateTimeEdit = (meeting: Meeting) => {
-    if (meeting.assigned_datetime) {
-      const date = new Date(meeting.assigned_datetime);
-      setTempDateTime({
-        date: date.toISOString().split('T')[0],
-        time: date.toTimeString().slice(0, 5)
-      });
-    } else {
-      const now = new Date();
-      setTempDateTime({
-        date: now.toISOString().split('T')[0],
-        time: '09:00'
-      });
-    }
-    setEditingDateTime(true);
-  };
-
-  const saveDateTimeEdit = async (meetingId: number) => {
-    try {
-      const combinedDateTime = new Date(`${tempDateTime.date}T${tempDateTime.time}`);
-      
-      const response = await fetch(API_CONFIG.ENDPOINTS.MEETINGS_UPDATE(meetingId), {
-        method: 'PUT',
-        headers: createAuthHeaders(accessToken!),
-        body: JSON.stringify({
-          assigned_datetime: combinedDateTime.toISOString(),
-          status: 'scheduled'
-        }),
-      });
-
-      if (response.ok) {
-        await loadMeetings();
-        setEditingDateTime(false);
-        toast({
-          title: "Meeting rescheduled",
-          description: "Meeting time has been updated successfully."
-        });
-      } else if (response.status === 409) {
-        const errorData = await response.json();
-        toast({
-          title: "Time slot occupied",
-          description: `This time is already booked by ${errorData.conflicting_meeting.name}`,
-          variant: "destructive"
-        });
-      } else {
-        throw new Error('Failed to reschedule meeting');
-      }
-    } catch (error) {
-      setEditingDateTime(false); // Reset editing state on error
-      toast({
-        title: "Error",
-        description: "Failed to reschedule meeting",
-        variant: "destructive"
-      });
-    }
   };
 
   const startDetailsEdit = (meeting: Meeting) => {
@@ -538,6 +483,25 @@ const AdminDashboard = ({ onAuthChange, onCreateMeetingChange }: AdminDashboardP
     });
     setCreateMeetingDateTime({ date: dateStr, time: timeStr });
     setShowCreateDialog(true);
+  };
+
+  const handleScheduleMeeting = (meeting: Meeting) => {
+    setMeetingToSchedule(meeting);
+    setIsReschedule(false);
+    setShowScheduleDialog(true);
+  };
+
+  const handleRescheduleMeeting = (meeting: Meeting) => {
+    setMeetingToSchedule(meeting);
+    setIsReschedule(true);
+    setShowScheduleDialog(true);
+  };
+
+  const handleScheduleSuccess = () => {
+    loadMeetings();
+    setShowScheduleDialog(false);
+    setMeetingToSchedule(null);
+    setIsReschedule(false);
   };
 
   const CalendarDayView = ({ date, meetings, onAssignMeeting, selectedMeeting }: {
@@ -907,10 +871,7 @@ const AdminDashboard = ({ onAuthChange, onCreateMeetingChange }: AdminDashboardP
         }}
         onCreateMeeting={() => openCreateMeetingDialog(new Date())}
         onLogout={handleLogout}
-        onScheduleMeeting={(meeting) => {
-          setSelectedMeeting(meeting);
-          startDateTimeEdit(meeting);
-        }}
+        onScheduleMeeting={handleScheduleMeeting}
       />
       <SidebarInset>
         {/* Main Content */}
@@ -994,6 +955,7 @@ const AdminDashboard = ({ onAuthChange, onCreateMeetingChange }: AdminDashboardP
                 onDaySelect={(date, dayMeetings) => {
                   setSelectedMeeting(null); // Clear meeting selection when day is selected
                 }}
+                onScheduleMeeting={handleScheduleMeeting}
               />
             </TabsContent>
 
@@ -1292,70 +1254,33 @@ const AdminDashboard = ({ onAuthChange, onCreateMeetingChange }: AdminDashboardP
                             <CalendarDays className="w-4 h-4 text-green-600" />
                             <span className="font-medium">Assigned Time:</span>
                           </div>
-                          {editingDateTime ? (
-                            <div className="space-y-2 p-3 border rounded-lg bg-muted/20">
-                              <div className="grid grid-cols-2 gap-2">
-                                <div className="space-y-1">
-                                  <Label className="text-xs">Date</Label>
-                                  <Input
-                                    type="date"
-                                    value={tempDateTime.date}
-                                    onChange={(e) => setTempDateTime({...tempDateTime, date: e.target.value})}
-                                    className="text-sm"
-                                  />
-                                </div>
-                                <div className="space-y-1">
-                                  <Label className="text-xs">Time</Label>
-                                  <Input
-                                    type="time"
-                                    value={tempDateTime.time}
-                                    onChange={(e) => setTempDateTime({...tempDateTime, time: e.target.value})}
-                                    className="text-sm"
-                                  />
-                                </div>
-                              </div>
-                              <div className="flex gap-2">
-                                <Button onClick={() => saveDateTimeEdit(selectedMeeting.id)} size="sm">
-                                  Save Time
+                          <div className="flex items-center gap-2">
+                            {selectedMeeting.assigned_datetime ? (
+                              <>
+                                <span className="text-green-700 font-medium">{formatDateTime(selectedMeeting.assigned_datetime)}</span>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => handleRescheduleMeeting(selectedMeeting)}
+                                  className="ml-2"
+                                >
+                                  <Edit className="w-3 h-3" />
                                 </Button>
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-muted-foreground italic">Not scheduled</span>
                                 <Button 
                                   variant="outline" 
-                                  size="sm" 
-                                  onClick={() => setEditingDateTime(false)}
+                                  size="sm"
+                                  onClick={() => handleScheduleMeeting(selectedMeeting)}
+                                  className="ml-2"
                                 >
-                                  Cancel
+                                  Schedule
                                 </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              {selectedMeeting.assigned_datetime ? (
-                                <>
-                                  <span className="text-green-700 font-medium">{formatDateTime(selectedMeeting.assigned_datetime)}</span>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm"
-                                    onClick={() => startDateTimeEdit(selectedMeeting)}
-                                    className="ml-2"
-                                  >
-                                    <Edit className="w-3 h-3" />
-                                  </Button>
-                                </>
-                              ) : (
-                                <>
-                                  <span className="text-muted-foreground italic">Not scheduled</span>
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    onClick={() => startDateTimeEdit(selectedMeeting)}
-                                    className="ml-2"
-                                  >
-                                    Schedule
-                                  </Button>
-                                </>
-                              )}
-                            </div>
-                          )}
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1469,6 +1394,15 @@ const AdminDashboard = ({ onAuthChange, onCreateMeetingChange }: AdminDashboardP
               )}
             </DialogContent>
           </Dialog>
+
+          <Schedule
+            meeting={meetingToSchedule}
+            isOpen={showScheduleDialog}
+            onClose={() => setShowScheduleDialog(false)}
+            onSuccess={handleScheduleSuccess}
+            accessToken={accessToken || ''}
+            isReschedule={isReschedule}
+          />
 
         </div>
       </SidebarInset>

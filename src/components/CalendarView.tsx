@@ -27,9 +27,10 @@ interface CalendarViewProps {
   onCreateMeeting?: (date: Date) => void;
   onDaySelect?: (date: Date, meetings: Meeting[]) => void;
   onAssignMeeting?: (meetingId: number, dateTime: string) => void;
+  onScheduleMeeting?: (meeting: Meeting) => void;
 }
 
-const CalendarView = ({ meetings, onMeetingSelect, selectedMeeting, onCreateMeeting, onDaySelect, onAssignMeeting }: CalendarViewProps) => {
+const CalendarView = ({ meetings, onMeetingSelect, selectedMeeting, onCreateMeeting, onDaySelect, onAssignMeeting, onScheduleMeeting }: CalendarViewProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [viewMode, setViewMode] = useState<'month' | 'day'>('month');
@@ -352,8 +353,7 @@ const CalendarView = ({ meetings, onMeetingSelect, selectedMeeting, onCreateMeet
                     key={meeting.id}
                     className={cn(
                       "p-3 rounded-lg calendar-event-card border-l-4 border-orange-400",
-                      "bg-orange-50",
-                      selectedMeeting?.id === meeting.id ? "ring-2 ring-primary bg-orange-100" : "hover:bg-orange-100"
+                      "bg-orange-50 hover:bg-orange-100"
                     )}
                   >
                     <div className="flex items-start gap-2">
@@ -372,44 +372,18 @@ const CalendarView = ({ meetings, onMeetingSelect, selectedMeeting, onCreateMeet
                             })}
                           </div>
                         )}
-                        <div className="flex items-center justify-between mt-2">
-                          <div className="text-xs text-calendar-muted">
-                            {selectedMeeting?.id === meeting.id ? 
-                              "Click on a calendar day to assign" : 
-                              "Ready to schedule"
-                            }
-                          </div>
+                        <div className="flex items-center justify-end mt-2">
                           <Button
                             size="sm"
-                            variant={selectedMeeting?.id === meeting.id ? "default" : "outline"}
-                            className={cn(
-                              "h-6 px-2 text-xs",
-                              selectedMeeting?.id === meeting.id 
-                                ? "bg-blue-600 hover:bg-blue-700 text-white" 
-                                : "border-orange-300 text-orange-700 hover:bg-orange-200"
-                            )}
+                            variant="outline"
+                            className="h-6 px-2 text-xs border-orange-300 text-orange-700 hover:bg-orange-200"
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (selectedMeeting?.id === meeting.id) {
-                                // Already selected, clear selection
-                                onMeetingSelect?.(null as any);
-                              } else {
-                                // Select this meeting for assignment
-                                onMeetingSelect?.(meeting);
-                              }
+                              onScheduleMeeting?.(meeting);
                             }}
                           >
-                            {selectedMeeting?.id === meeting.id ? (
-                              <>
-                                <Calendar className="w-3 h-3 mr-1" />
-                                Cancel
-                              </>
-                            ) : (
-                              <>
-                                <CalendarPlus className="w-3 h-3 mr-1" />
-                                Schedule
-                              </>
-                            )}
+                            <CalendarPlus className="w-3 h-3 mr-1" />
+                            Schedule
                           </Button>
                         </div>
                       </div>
