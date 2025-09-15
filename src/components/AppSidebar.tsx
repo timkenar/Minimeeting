@@ -13,6 +13,7 @@ import {
 
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { NotificationBell } from "@/components/NotificationBell";
 import {
   Sidebar,
   SidebarContent,
@@ -48,9 +49,10 @@ interface AppSidebarProps {
   onMeetingSelect: (meeting: Meeting) => void;
   onCreateMeeting: () => void;
   onLogout: () => void;
+  onScheduleMeeting?: (meeting: Meeting) => void;
 }
 
-export function AppSidebar({ meetings, selectedMeeting, onMeetingSelect, onCreateMeeting, onLogout }: AppSidebarProps) {
+export function AppSidebar({ meetings, selectedMeeting, onMeetingSelect, onCreateMeeting, onLogout, onScheduleMeeting }: AppSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [lastSeenTimestamp, setLastSeenTimestamp] = React.useState(() => {
@@ -104,12 +106,21 @@ export function AppSidebar({ meetings, selectedMeeting, onMeetingSelect, onCreat
   return (
     <Sidebar variant="inset" className="border-r">
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-1">
-          <Calendar className="w-6 h-6 text-primary" />
-          <div className="flex flex-col">
-            <span className="text-lg font-bold">MiniMeet</span>
-            <span className="text-xs text-muted-foreground">Admin Panel</span>
+        <div className="flex items-center justify-between px-2 py-1">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-6 h-6 text-primary" />
+            <div className="flex flex-col">
+              <span className="text-lg font-bold">MiniMeet</span>
+              <span className="text-xs text-muted-foreground">Admin Panel</span>
+            </div>
           </div>
+          {onScheduleMeeting && (
+            <NotificationBell
+              meetings={meetings}
+              onScheduleMeeting={onScheduleMeeting}
+              onViewMeeting={onMeetingSelect}
+            />
+          )}
         </div>
       </SidebarHeader>
 

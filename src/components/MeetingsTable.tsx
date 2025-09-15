@@ -24,7 +24,9 @@ import {
   MapPin,
   Star,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  PenTool,
+  Bell
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -76,9 +78,11 @@ interface MeetingsTableProps {
   onMeetingSelect: (meeting: Meeting) => void;
   onEditMeeting: (meeting: Meeting) => void;
   onDeleteMeeting: (meetingId: number) => void;
+  onScheduleMeeting?: (meeting: Meeting) => void;
+  onRescheduleMeeting?: (meeting: Meeting) => void;
 }
 
-export function MeetingsTable({ meetings, onMeetingSelect, onEditMeeting, onDeleteMeeting }: MeetingsTableProps) {
+export function MeetingsTable({ meetings, onMeetingSelect, onEditMeeting, onDeleteMeeting, onScheduleMeeting, onRescheduleMeeting }: MeetingsTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("date");
@@ -261,7 +265,39 @@ export function MeetingsTable({ meetings, onMeetingSelect, onEditMeeting, onDele
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end">
+        <div className="flex justify-between items-center">
+          {/* Schedule/Reschedule Button */}
+          <div className="flex gap-2">
+            {onScheduleMeeting && (!meeting.status || meeting.status === 'pending') && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onScheduleMeeting(meeting);
+                }}
+                className="h-8 px-3 text-xs"
+              >
+                <PenTool className="w-3 h-3 mr-1" />
+                Schedule
+              </Button>
+            )}
+            {onRescheduleMeeting && meeting.status === 'scheduled' && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRescheduleMeeting(meeting);
+                }}
+                className="h-8 px-3 text-xs"
+              >
+                <PenTool className="w-3 h-3 mr-1" />
+                Reschedule
+              </Button>
+            )}
+          </div>
+          
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -283,6 +319,24 @@ export function MeetingsTable({ meetings, onMeetingSelect, onEditMeeting, onDele
                 <Edit className="mr-2 h-4 w-4" />
                 Edit Meeting
               </DropdownMenuItem>
+              {onScheduleMeeting && (!meeting.status || meeting.status === 'pending') && (
+                <DropdownMenuItem onClick={(e) => {
+                  e.stopPropagation();
+                  onScheduleMeeting(meeting);
+                }}>
+                  <PenTool className="mr-2 h-4 w-4" />
+                  Schedule Meeting
+                </DropdownMenuItem>
+              )}
+              {onRescheduleMeeting && meeting.status === 'scheduled' && (
+                <DropdownMenuItem onClick={(e) => {
+                  e.stopPropagation();
+                  onRescheduleMeeting(meeting);
+                }}>
+                  <PenTool className="mr-2 h-4 w-4" />
+                  Reschedule Meeting
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 className="text-destructive"
@@ -586,6 +640,24 @@ export function MeetingsTable({ meetings, onMeetingSelect, onEditMeeting, onDele
                               <Edit className="mr-2 h-4 w-4" />
                               Edit Meeting
                             </DropdownMenuItem>
+                            {onScheduleMeeting && (!meeting.status || meeting.status === 'pending') && (
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                onScheduleMeeting(meeting);
+                              }}>
+                                <PenTool className="mr-2 h-4 w-4" />
+                                Schedule Meeting
+                              </DropdownMenuItem>
+                            )}
+                            {onRescheduleMeeting && meeting.status === 'scheduled' && (
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                onRescheduleMeeting(meeting);
+                              }}>
+                                <PenTool className="mr-2 h-4 w-4" />
+                                Reschedule Meeting
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               className="text-destructive"

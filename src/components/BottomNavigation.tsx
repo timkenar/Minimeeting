@@ -29,7 +29,7 @@ export function BottomNavigation({
   const handleLogout = useCallback(() => {
     if (onLogout) {
       onLogout();
-      navigate('/admin');
+      navigate('/');
     }
   }, [onLogout, navigate]);
 

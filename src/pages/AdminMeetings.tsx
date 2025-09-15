@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { API_CONFIG, createAuthHeaders } from "@/config/api";
+import { Schedule } from "@/components/Schedule";
 
 interface Meeting {
   id: number;
@@ -55,6 +56,9 @@ const AdminMeetings = ({ onAuthChange, onCreateMeetingChange }: AdminMeetingsPro
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [editingDateTime, setEditingDateTime] = useState(false);
   const [tempDateTime, setTempDateTime] = useState({ date: '', time: '' });
+  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
+  const [meetingToSchedule, setMeetingToSchedule] = useState<Meeting | null>(null);
+  const [isReschedule, setIsReschedule] = useState(false);
   const [editingDetails, setEditingDetails] = useState(false);
   const [tempDetails, setTempDetails] = useState({ name: '', organization: '', reason: '', email: '', phone: '' });
   const { toast } = useToast();
@@ -124,6 +128,25 @@ const AdminMeetings = ({ onAuthChange, onCreateMeetingChange }: AdminMeetingsPro
         variant: "destructive"
       });
     }
+  };
+
+  const handleScheduleMeeting = (meeting: Meeting) => {
+    setMeetingToSchedule(meeting);
+    setIsReschedule(false);
+    setShowScheduleDialog(true);
+  };
+
+  const handleRescheduleMeeting = (meeting: Meeting) => {
+    setMeetingToSchedule(meeting);
+    setIsReschedule(true);
+    setShowScheduleDialog(true);
+  };
+
+  const handleScheduleSuccess = () => {
+    loadMeetings();
+    setShowScheduleDialog(false);
+    setMeetingToSchedule(null);
+    setIsReschedule(false);
   };
 
   const handleLogout = async () => {
@@ -263,6 +286,7 @@ const AdminMeetings = ({ onAuthChange, onCreateMeetingChange }: AdminMeetingsPro
           window.location.href = '/admin';
         }}
         onLogout={handleLogout}
+        onScheduleMeeting={handleScheduleMeeting}
       />
       <SidebarInset>
         <div className="flex-1 p-4 lg:p-6">
@@ -277,6 +301,8 @@ const AdminMeetings = ({ onAuthChange, onCreateMeetingChange }: AdminMeetingsPro
               setShowMeetingDialog(true);
             }}
             onDeleteMeeting={deleteMeeting}
+            onScheduleMeeting={handleScheduleMeeting}
+            onRescheduleMeeting={handleRescheduleMeeting}
           />
 
           {/* Meeting Details Dialog */}
@@ -455,6 +481,16 @@ const AdminMeetings = ({ onAuthChange, onCreateMeetingChange }: AdminMeetingsPro
           </Dialog>
         </div>
       </SidebarInset>
+      
+      {/* Schedule Dialog */}
+      <Schedule
+        meeting={meetingToSchedule}
+        isOpen={showScheduleDialog}
+        onClose={() => setShowScheduleDialog(false)}
+        onSuccess={handleScheduleSuccess}
+        accessToken={accessToken || ''}
+        isReschedule={isReschedule}
+      />
     </SidebarProvider>
   );
 };

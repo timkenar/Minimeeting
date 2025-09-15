@@ -907,6 +907,10 @@ const AdminDashboard = ({ onAuthChange, onCreateMeetingChange }: AdminDashboardP
         }}
         onCreateMeeting={() => openCreateMeetingDialog(new Date())}
         onLogout={handleLogout}
+        onScheduleMeeting={(meeting) => {
+          setSelectedMeeting(meeting);
+          startDateTimeEdit(meeting);
+        }}
       />
       <SidebarInset>
         {/* Main Content */}
